@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-01-14
+
 ### Added
-- Initial project setup with TypeScript and MCP SDK
-- Package.json with dependencies for ADHD-friendly productivity system
-- Git-flow workflow initialization
+- Core capture engine with ADHD-friendly AI routing
+- TrackerManager for reading and parsing existing Churn system
+- InferenceEngine with OpenAI integration for context detection
+- CaptureEngine orchestrating the full capture workflow
+- Type definitions for all core Churn system components
+- Smart fallback system for low-confidence captures
+- Emergency capture ensuring no thoughts are lost
+- Comprehensive error handling and logging
 
 ## [0.1.0] - 2025-01-14
 

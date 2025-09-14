@@ -1,0 +1,34 @@
+[
+  {
+    "tag": "gsc-ai",
+    "trackerFile": "/mock/path/gsc-ai-tracker.md",
+    "collectionFile": "/mock/path/gsc-ai.md",
+    "priority": 1,
+    "contextType": "business",
+    "active": true
+  },
+  {
+    "tag": "project-55",
+    "trackerFile": "/mock/path/project-55-tracker.md",
+    "collectionFile": "/mock/path/project-55.md",
+    "priority": 1,
+    "contextType": "project",
+    "active": true
+  },
+  {
+    "tag": "tractor",
+    "trackerFile": "/mock/path/tractor-tracker.md",
+    "collectionFile": "/mock/path/tractor.md",
+    "priority": 1,
+    "contextType": "personal",
+    "active": true
+  },
+  {
+    "tag": "inactive-test",
+    "trackerFile": "/mock/path/inactive-tracker.md",
+    "collectionFile": "/mock/path/inactive.md",
+    "priority": 1,
+    "contextType": "project",
+    "active": false
+  }
+]
