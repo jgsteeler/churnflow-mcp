@@ -44,6 +44,47 @@ npm run lint
 npm run format
 ```
 
+## Git Flow Workflow
+
+**CRITICAL**: This project strictly follows git-flow branching model. ALWAYS use git-flow commands for branch management:
+
+### Feature Development
+```bash
+# Start a new feature (creates feature/name branch from develop)
+git flow feature start <feature-name>
+
+# Finish feature (merges to develop, deletes feature branch)
+git flow feature finish <feature-name>
+
+# Publish feature to remote
+git flow feature publish <feature-name>
+```
+
+### Release Management
+```bash
+# Start a release (creates release/version branch from develop)
+git flow release start <version>
+
+# Finish release (merges to main and develop, tags, deletes release branch)
+git flow release finish <version>
+```
+
+### Hotfix Management
+```bash
+# Start hotfix (creates hotfix/name branch from main)
+git flow hotfix start <hotfix-name>
+
+# Finish hotfix (merges to main and develop, deletes hotfix branch)
+git flow hotfix finish <hotfix-name>
+```
+
+### Rules for AI Assistant
+- **NEVER** use `git checkout -b` or `git branch` for feature development
+- **ALWAYS** use `git flow feature start` for new features
+- **ALWAYS** use `git flow feature finish` to complete features
+- If a non-git-flow branch exists, migrate it to proper git-flow branch
+- Branch naming should be descriptive and kebab-case (e.g. `cli-interface`, `capture-engine`)
+
 ## Testing
 
 - Test framework: Jest with ts-jest for ESM support
