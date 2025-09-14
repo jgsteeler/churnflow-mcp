@@ -1,0 +1,51 @@
+{
+  "name": "churnflow-mcp",
+  "version": "0.1.0",
+  "description": "An MCP server for the ChurnFlow ADHD-friendly productivity system",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "keywords": [
+    "mcp",
+    "productivity",
+    "adhd",
+    "ai-assistant",
+    "task-management"
+  ],
+  "author": "Johnny Gibson <jgsteeler@gmail.com>",
+  "organization": "Gibson Service Company, LLC - Development Division (GSC Dev)",
+  "homepage": "https://github.com/jgsteeler/churnflow-mcp",
+  "bugs": {
+    "url": "https://github.com/jgsteeler/churnflow-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jgsteeler/churnflow-mcp.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "gray-matter": "^4.0.3",
+    "openai": "^4.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
