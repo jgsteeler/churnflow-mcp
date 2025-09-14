@@ -69,30 +69,45 @@ export class InferenceEngine {
    * System prompt that teaches the AI about ADHD-friendly productivity
    */
   private getSystemPrompt(): string {
-    return `You are an ADHD-friendly productivity assistant that helps route captured thoughts to the right project trackers.
+    return `You are an ADHD-friendly productivity assistant that analyzes captured thoughts and generates multiple actionable items.
 
 Your job is to:
 1. Analyze natural language input from someone with ADHD
-2. Determine which project/context this belongs to
-3. Classify the type of item (action, review, reference, someday)
-4. Format it appropriately for a markdown tracker
-5. Assess confidence and whether human review is needed
+2. Identify ALL actionable items, updates, and completions within the input
+3. Generate separate entries for each distinct item (action, review, reference, someday, activity)
+4. Detect if the input indicates completion of existing tasks
+5. Route each item to the appropriate tracker
 
 Key principles for ADHD brains:
-- Reduce cognitive overhead - don't ask unnecessary questions
-- Preserve the original thought/energy - don't over-process
-- When unsure, route to review rather than guessing wrong
-- Action items should be specific and actionable
-- References should capture context for future retrieval
+- One capture can contain multiple items - extract them all
+- Activity items capture what happened (go to Activity Log)
+- Action items are specific tasks to do (go to Action Items)
+- References capture important info (go to References)
+- Review items need human decision (go to review queue)
+- Someday items are future possibilities
+- Look for task completions ("Doug picked up his welder" = task done)
 
 Always respond with valid JSON in this format:
 {
-  "inferredTracker": "tag-name",
-  "itemType": "action|review|reference|someday",
-  "priority": "critical|high|medium|low",
+  "primaryTracker": "most-relevant-tag",
   "confidence": 0.95,
-  "reasoning": "Brief explanation of routing decision",
-  "formattedEntry": "- [ ] #task Formatted markdown entry with appropriate tags",
+  "overallReasoning": "Brief explanation of analysis",
+  "generatedItems": [
+    {
+      "tracker": "tag-name",
+      "itemType": "action|review|reference|someday|activity",
+      "priority": "critical|high|medium|low",
+      "content": "- [date] Formatted entry for this specific item",
+      "reasoning": "Why this item goes here"
+    }
+  ],
+  "taskCompletions": [
+    {
+      "tracker": "tag-name",
+      "description": "What task was completed",
+      "reasoning": "Evidence of completion"
+    }
+  ],
   "requiresReview": false
 }`;
   }
@@ -125,7 +140,7 @@ ${tag}: ${info.friendlyName} (${info.contextType})
 TASK:
 Analyze the input and determine:
 1. Which tracker (tag) this belongs to based on context clues
-2. What type of item this is (action/review/reference/someday)
+2. What type of item this is (action/review/reference/someday/activity)
 3. Appropriate priority level
 4. Formatted markdown entry with proper tags and structure
 5. Your confidence level and if human review is needed
@@ -141,13 +156,49 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   private parseInferenceResult(aiResult: any, input: CaptureInput): InferenceResult {
     const normalizedConfidence = Math.max(0, Math.min(1, aiResult.confidence || 0.5));
     
+    // Parse generated items
+    const generatedItems: any[] = [];
+    if (aiResult.generatedItems && Array.isArray(aiResult.generatedItems)) {
+      for (const item of aiResult.generatedItems) {
+        generatedItems.push({
+          tracker: item.tracker || 'review',
+          itemType: this.validateItemType(item.itemType),
+          priority: this.validatePriority(item.priority),
+          content: item.content || this.fallbackFormat(input.text),
+          reasoning: item.reasoning || 'Generated item'
+        });
+      }
+    }
+    
+    // If no items generated, create a fallback item
+    if (generatedItems.length === 0) {
+      generatedItems.push({
+        tracker: aiResult.primaryTracker || 'review',
+        itemType: 'review',
+        priority: 'medium',
+        content: this.fallbackFormat(input.text),
+        reasoning: 'Fallback item creation'
+      });
+    }
+    
+    // Parse task completions
+    const taskCompletions: any[] = [];
+    if (aiResult.taskCompletions && Array.isArray(aiResult.taskCompletions)) {
+      for (const completion of aiResult.taskCompletions) {
+        taskCompletions.push({
+          tracker: completion.tracker || 'review',
+          description: completion.description || 'Task completion detected',
+          reasoning: completion.reasoning || 'Completion inference'
+        });
+      }
+    }
+    
     return {
-      inferredTracker: aiResult.inferredTracker || 'review',
-      itemType: this.validateItemType(aiResult.itemType),
-      priority: this.validatePriority(aiResult.priority),
+      primaryTracker: aiResult.primaryTracker || 'review',
       confidence: normalizedConfidence,
-      reasoning: aiResult.reasoning || 'AI inference result',
-      formattedEntry: aiResult.formattedEntry || this.fallbackFormat(input.text),
+      overallReasoning: aiResult.overallReasoning || 'AI inference result',
+      generatedItems,
+      taskCompletions,
       requiresReview: (aiResult.requiresReview !== undefined ? aiResult.requiresReview : false) || normalizedConfidence < this.config.confidenceThreshold
     };
   }
@@ -157,12 +208,17 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    */
   private fallbackInference(input: CaptureInput): InferenceResult {
     return {
-      inferredTracker: 'review',
-      itemType: 'review',
-      priority: 'medium',
+      primaryTracker: 'review',
       confidence: 0.1,
-      reasoning: 'AI inference failed, routing to review',
-      formattedEntry: this.fallbackFormat(input.text),
+      overallReasoning: 'AI inference failed, routing to review',
+      generatedItems: [{
+        tracker: 'review',
+        itemType: 'review',
+        priority: 'medium',
+        content: this.fallbackFormat(input.text),
+        reasoning: 'Fallback due to AI failure'
+      }],
+      taskCompletions: [],
       requiresReview: true
     };
   }
@@ -179,7 +235,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    * Validate and normalize item type
    */
   private validateItemType(itemType: any): ItemType {
-    const validTypes: ItemType[] = ['action', 'review', 'reference', 'someday'];
+    const validTypes: ItemType[] = ['action', 'review', 'reference', 'someday', 'activity'];
     if (validTypes.includes(itemType)) {
       return itemType;
     }

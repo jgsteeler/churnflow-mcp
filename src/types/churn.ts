@@ -2,7 +2,7 @@
  * Core types for ChurnFlow ADHD-friendly productivity system
  */
 
-export type ItemType = 'action' | 'review' | 'reference' | 'someday';
+export type ItemType = 'action' | 'review' | 'reference' | 'someday' | 'activity';
 export type ContextType = 'business' | 'personal' | 'project' | 'system';
 export type Priority = 'critical' | 'high' | 'medium' | 'low';
 
@@ -59,15 +59,34 @@ export interface CaptureInput {
 }
 
 /**
- * AI inference result for captured items
+ * Single generated item from AI inference
  */
-export interface InferenceResult {
-  inferredTracker: string;
+export interface GeneratedItem {
+  tracker: string;
   itemType: ItemType;
   priority: Priority;
-  confidence: number;
+  content: string;
   reasoning: string;
-  formattedEntry: string;
+}
+
+/**
+ * Task completion detection
+ */
+export interface TaskCompletion {
+  tracker: string;
+  description: string;
+  reasoning: string;
+}
+
+/**
+ * AI inference result for captured items (supports multiple items)
+ */
+export interface InferenceResult {
+  primaryTracker: string;
+  confidence: number;
+  overallReasoning: string;
+  generatedItems: GeneratedItem[];
+  taskCompletions: TaskCompletion[];
   requiresReview: boolean;
 }
 
@@ -84,14 +103,25 @@ export interface ChurnConfig {
 }
 
 /**
- * Result of a capture operation
+ * Individual item result from capture
  */
-export interface CaptureResult {
+export interface CaptureItemResult {
   success: boolean;
   tracker: string;
   itemType: ItemType;
   formattedEntry: string;
+  error?: string;
+}
+
+/**
+ * Result of a capture operation (supports multiple items)
+ */
+export interface CaptureResult {
+  success: boolean;
+  primaryTracker: string;
   confidence: number;
+  itemResults: CaptureItemResult[];
+  completedTasks: TaskCompletion[];
   requiresReview: boolean;
   error?: string;
 }

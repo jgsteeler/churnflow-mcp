@@ -201,6 +201,54 @@ export class TrackerManager {
   }
 
   /**
+   * Append an activity item to the Activity Log section
+   */
+  async appendActivityToTracker(tag: string, formattedEntry: string): Promise<boolean> {
+    const tracker = this.trackers.get(tag);
+    if (!tracker) {
+      console.error(`Tracker not found: ${tag}`);
+      return false;
+    }
+
+    try {
+      // Read current file content
+      const currentContent = await fs.readFile(tracker.filePath, 'utf-8');
+      const parsed = matter(currentContent);
+      
+      // Find the Activity Log section to append to
+      const lines = parsed.content.split('\n');
+      const activitySectionIndex = this.findSectionIndex(lines, '## Activity Log');
+      
+      if (activitySectionIndex !== -1) {
+        // Insert after the section header
+        lines.splice(activitySectionIndex + 2, 0, formattedEntry);
+      } else {
+        // Create Activity Log section if it doesn't exist
+        const actionSectionIndex = this.findSectionIndex(lines, '## Action Items');
+        if (actionSectionIndex !== -1) {
+          // Add Activity Log section before Action Items
+          lines.splice(actionSectionIndex, 0, '## Activity Log', '', formattedEntry, '');
+        } else {
+          // Add at the end
+          lines.push('', '## Activity Log', '', formattedEntry);
+        }
+      }
+      
+      // Reconstruct the file with frontmatter
+      const updatedContent = matter.stringify(lines.join('\n'), parsed.data);
+      
+      // Write back to file
+      await fs.writeFile(tracker.filePath, updatedContent, 'utf-8');
+      
+      console.log(`Successfully appended activity to tracker: ${tag}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to append activity to tracker ${tag}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Find the index of a section header
    */
   private findSectionIndex(lines: string[], sectionHeader: string): number {
