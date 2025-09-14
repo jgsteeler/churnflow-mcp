@@ -15,7 +15,7 @@ import { TrackerManager } from './TrackerManager.js';
  * input and route it to the right tracker with the right formatting.
  */
 export class InferenceEngine {
-  private openai: OpenAI;
+  private openai!: OpenAI;
   
   constructor(
     private config: ChurnConfig,
@@ -139,14 +139,16 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    * Parse the AI response into our result format
    */
   private parseInferenceResult(aiResult: any, input: CaptureInput): InferenceResult {
+    const normalizedConfidence = Math.max(0, Math.min(1, aiResult.confidence || 0.5));
+    
     return {
       inferredTracker: aiResult.inferredTracker || 'review',
       itemType: this.validateItemType(aiResult.itemType),
       priority: this.validatePriority(aiResult.priority),
-      confidence: Math.max(0, Math.min(1, aiResult.confidence || 0.5)),
+      confidence: normalizedConfidence,
       reasoning: aiResult.reasoning || 'AI inference result',
       formattedEntry: aiResult.formattedEntry || this.fallbackFormat(input.text),
-      requiresReview: aiResult.requiresReview || aiResult.confidence < this.config.confidenceThreshold
+      requiresReview: (aiResult.requiresReview !== undefined ? aiResult.requiresReview : false) || normalizedConfidence < this.config.confidenceThreshold
     };
   }
 
