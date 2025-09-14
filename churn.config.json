@@ -1,0 +1,8 @@
+{
+  "collectionsPath": "/Users/jack/code/Collections/Churn/Collections",
+  "trackingPath": "/Users/jack/code/Collections/Churn/Tracking",
+  "crossrefPath": "/Users/jack/code/Collections/Churn/crossref/crossref.json",
+  "aiProvider": "openai",
+  "confidenceThreshold": 0.7,
+  "note": "Set OPENAI_API_KEY environment variable or add aiApiKey here"
+}
