@@ -319,7 +319,7 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
 async function main(): Promise<void> {
   const server = new Server({
     name: 'churnflow-mcp',
-    version: '0.2.2',
+    version: '0.3.0',
     capabilities: {
       tools: {},
     },
@@ -353,7 +353,7 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   
-  console.error('ChurnFlow MCP Server v0.2.2 started successfully');
+  console.error('ChurnFlow MCP Server v0.3.0 started successfully');
   console.error('Available tools: capture, status, list_trackers');
 }
 
