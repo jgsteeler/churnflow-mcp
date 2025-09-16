@@ -5,8 +5,11 @@ import {
   Tracker, 
   TrackerFrontmatter, 
   CrossrefEntry, 
-  ChurnConfig 
+  ChurnConfig,
+  ItemType,
+  FORMATTING_CONSTANTS 
 } from '../types/churn.js';
+import { FormattingUtils } from '../utils/FormattingUtils.js';
 
 /**
  * Manages reading, parsing, and updating Churn system trackers
@@ -160,7 +163,7 @@ export class TrackerManager {
   }
 
   /**
-   * Append an item to a tracker file
+   * Append an item to a tracker file with proper section placement and ordering
    */
   async appendToTracker(tag: string, formattedEntry: string): Promise<boolean> {
     const tracker = this.trackers.get(tag);
@@ -174,20 +177,15 @@ export class TrackerManager {
       const currentContent = await fs.readFile(tracker.filePath, 'utf-8');
       const parsed = matter(currentContent);
       
-      // Find the appropriate section to append to
-      const lines = parsed.content.split('\n');
-      const actionSectionIndex = this.findSectionIndex(lines, '## Action Items');
-      
-      if (actionSectionIndex !== -1) {
-        // Insert after the section header
-        lines.splice(actionSectionIndex + 2, 0, formattedEntry);
-      } else {
-        // Append to end if no action items section found
-        lines.push('', formattedEntry);
-      }
+      // Use the new section placement logic
+      const updatedLines = this.insertEntryIntoSection(
+        parsed.content.split('\n'),
+        '## Action Items',
+        formattedEntry
+      );
       
       // Reconstruct the file with frontmatter
-      const updatedContent = matter.stringify(lines.join('\n'), parsed.data);
+      const updatedContent = matter.stringify(updatedLines.join('\n'), parsed.data);
       
       // Write back to file
       await fs.writeFile(tracker.filePath, updatedContent, 'utf-8');
@@ -201,7 +199,7 @@ export class TrackerManager {
   }
 
   /**
-   * Append an activity item to the Activity Log section
+   * Append an activity item to the Activity Log section with proper placement and ordering
    */
   async appendActivityToTracker(tag: string, formattedEntry: string): Promise<boolean> {
     const tracker = this.trackers.get(tag);
@@ -215,27 +213,16 @@ export class TrackerManager {
       const currentContent = await fs.readFile(tracker.filePath, 'utf-8');
       const parsed = matter(currentContent);
       
-      // Find the Activity Log section to append to
-      const lines = parsed.content.split('\n');
-      const activitySectionIndex = this.findSectionIndex(lines, '## Activity Log');
-      
-      if (activitySectionIndex !== -1) {
-        // Insert after the section header
-        lines.splice(activitySectionIndex + 2, 0, formattedEntry);
-      } else {
-        // Create Activity Log section if it doesn't exist
-        const actionSectionIndex = this.findSectionIndex(lines, '## Action Items');
-        if (actionSectionIndex !== -1) {
-          // Add Activity Log section before Action Items
-          lines.splice(actionSectionIndex, 0, '## Activity Log', '', formattedEntry, '');
-        } else {
-          // Add at the end
-          lines.push('', '## Activity Log', '', formattedEntry);
-        }
-      }
+      // Use the new section placement logic
+      const updatedLines = this.insertEntryIntoSection(
+        parsed.content.split('\n'),
+        '## Activity Log',
+        formattedEntry,
+        true // Sort activities by timestamp
+      );
       
       // Reconstruct the file with frontmatter
-      const updatedContent = matter.stringify(lines.join('\n'), parsed.data);
+      const updatedContent = matter.stringify(updatedLines.join('\n'), parsed.data);
       
       // Write back to file
       await fs.writeFile(tracker.filePath, updatedContent, 'utf-8');
@@ -256,9 +243,322 @@ export class TrackerManager {
   }
 
   /**
+   * v0.2.2: Insert entry into the correct section with proper placement and ordering
+   */
+  private insertEntryIntoSection(
+    lines: string[],
+    sectionHeader: string,
+    newEntry: string,
+    sortByDate: boolean = false
+  ): string[] {
+    const sectionIndex = this.findSectionIndex(lines, sectionHeader);
+    
+    if (sectionIndex !== -1) {
+      // Section exists - find where to insert the new entry
+      return this.insertIntoExistingSection(lines, sectionIndex, newEntry, sortByDate);
+    } else {
+      // Section doesn't exist - create it
+      return this.createSectionAndInsert(lines, sectionHeader, newEntry);
+    }
+  }
+
+  /**
+   * Insert entry into existing section with proper ordering
+   */
+  private insertIntoExistingSection(
+    lines: string[],
+    sectionIndex: number,
+    newEntry: string,
+    sortByDate: boolean
+  ): string[] {
+    // Find the end of this section (next ## header or end of file)
+    let sectionEndIndex = lines.length;
+    for (let i = sectionIndex + 1; i < lines.length; i++) {
+      if (lines[i].startsWith('##')) {
+        sectionEndIndex = i;
+        break;
+      }
+    }
+
+    // Extract existing entries from this section
+    const existingEntries: string[] = [];
+    let insertIndex = sectionIndex + 1;
+
+    // Skip blank line after section header if it exists
+    if (insertIndex < sectionEndIndex && lines[insertIndex].trim() === '') {
+      insertIndex++;
+    }
+
+    // Collect existing entries
+    for (let i = insertIndex; i < sectionEndIndex; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith('-') && line.trim() !== '') {
+        existingEntries.push(line);
+      }
+    }
+
+    // Add new entry and sort if needed
+    existingEntries.push(newEntry);
+    if (sortByDate) {
+      existingEntries.sort((a, b) => this.compareDateInEntries(a, b));
+    }
+
+    // Rebuild section with proper spacing
+    const newLines = [...lines];
+    
+    // Remove old entries from section
+    let entriesToRemove = 0;
+    for (let i = insertIndex; i < sectionEndIndex; i++) {
+      if (lines[i].trim().startsWith('-') || lines[i].trim() === '') {
+        entriesToRemove++;
+      } else {
+        break;
+      }
+    }
+    
+    if (entriesToRemove > 0) {
+      newLines.splice(insertIndex, entriesToRemove);
+    }
+
+    // Insert formatted entries
+    const entriesToInsert = ['', ...existingEntries];
+    newLines.splice(insertIndex, 0, ...entriesToInsert);
+
+    return newLines;
+  }
+
+  /**
+   * Create new section and insert entry
+   */
+  private createSectionAndInsert(
+    lines: string[],
+    sectionHeader: string,
+    newEntry: string
+  ): string[] {
+    // Determine where to place the new section based on standard order
+    const sectionOrder = [
+      '## Activity Log',
+      '## Action Items', 
+      '## Review Queue',
+      '## References',
+      '## Someday/Maybe',
+      '## Notes & Context'
+    ];
+
+    const currentSectionPriority = sectionOrder.indexOf(sectionHeader);
+    
+    // Find the best place to insert this section
+    let insertIndex = lines.length;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('##')) {
+        const existingSectionPriority = sectionOrder.indexOf(line);
+        if (existingSectionPriority > currentSectionPriority || existingSectionPriority === -1) {
+          // Insert before this section
+          insertIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Create the new section with proper spacing
+    const newSectionLines = [];
+    
+    // Add blank line before section if not at the beginning
+    if (insertIndex > 0 && lines[insertIndex - 1].trim() !== '') {
+      newSectionLines.push('');
+    }
+    
+    // Add section header, blank line, and entry
+    newSectionLines.push(sectionHeader, '', newEntry);
+    
+    // Add blank line after if there's content following
+    if (insertIndex < lines.length && lines[insertIndex].trim() !== '') {
+      newSectionLines.push('');
+    }
+
+    const newLines = [...lines];
+    newLines.splice(insertIndex, 0, ...newSectionLines);
+
+    return newLines;
+  }
+
+  /**
+   * Compare two entries by their timestamps/dates for sorting (oldest first)
+   */
+  private compareDateInEntries(entryA: string, entryB: string): number {
+    const dateA = this.extractDateFromEntry(entryA);
+    const dateB = this.extractDateFromEntry(entryB);
+    
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;  // Entries without dates go to the end
+    if (!dateB) return -1;
+    
+    return dateA.getTime() - dateB.getTime(); // Oldest first
+  }
+
+  /**
+   * Extract date/timestamp from an entry for sorting
+   */
+  private extractDateFromEntry(entry: string): Date | null {
+    // Look for timestamp format [YYYY-MM-DD HH:MM]
+    const timestampMatch = entry.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/);
+    if (timestampMatch) {
+      return new Date(timestampMatch[1]);
+    }
+
+    // Look for date format [YYYY-MM-DD] 
+    const dateMatch = entry.match(/\[(\d{4}-\d{2}-\d{2})\]/);
+    if (dateMatch) {
+      return new Date(dateMatch[1]);
+    }
+
+    // Look for due date format 📅 YYYY-MM-DD
+    const dueDateMatch = entry.match(/📅 (\d{4}-\d{2}-\d{2})/);
+    if (dueDateMatch) {
+      return new Date(dueDateMatch[1]);
+    }
+
+    // Look for completion date ✅ YYYY-MM-DD
+    const completionMatch = entry.match(/✅ (\d{4}-\d{2}-\d{2})/);
+    if (completionMatch) {
+      return new Date(completionMatch[1]);
+    }
+
+    return null;
+  }
+
+  /**
    * Refresh tracker data (useful after updates)
    */
   async refresh(): Promise<void> {
     await this.initialize();
+  }
+
+  /**
+   * v0.2.2: Create a properly formatted entry using FormattingUtils
+   */
+  createFormattedEntry(
+    itemType: ItemType, 
+    description: string, 
+    options: {
+      tag?: string;
+      priority?: 'critical' | 'high' | 'medium' | 'low';
+      dueDate?: Date;
+      confidence?: number;
+    } = {}
+  ): string {
+    return FormattingUtils.formatEntry(itemType, description, options);
+  }
+
+  /**
+   * v0.2.2: Append a formatted entry to a tracker with validation
+   */
+  async appendFormattedEntry(
+    tag: string, 
+    itemType: ItemType,
+    description: string,
+    options: {
+      tag?: string;
+      priority?: 'critical' | 'high' | 'medium' | 'low';
+      dueDate?: Date;
+      confidence?: number;
+    } = {}
+  ): Promise<boolean> {
+    // Create properly formatted entry
+    const formattedEntry = this.createFormattedEntry(itemType, description, options);
+    
+    // Validate the formatting
+    const validation = FormattingUtils.validateEntryFormat(formattedEntry, itemType);
+    if (!validation.isValid) {
+      console.warn(`Formatting validation failed for ${itemType}:`, validation.issues);
+      console.warn('Entry:', formattedEntry);
+    }
+    
+    // Use appropriate append method based on item type
+    if (itemType === 'activity') {
+      return await this.appendActivityToTracker(tag, formattedEntry);
+    } else {
+      return await this.appendToTracker(tag, formattedEntry);
+    }
+  }
+
+  /**
+   * v0.2.2: Validate existing entries in a tracker for formatting consistency
+   */
+  async validateTrackerFormatting(tag: string): Promise<{
+    isValid: boolean;
+    issues: Array<{ line: number; entry: string; issues: string[] }>;
+    suggestions: string[];
+  }> {
+    const tracker = this.trackers.get(tag);
+    if (!tracker) {
+      return {
+        isValid: false,
+        issues: [{ line: 0, entry: '', issues: ['Tracker not found'] }],
+        suggestions: []
+      };
+    }
+
+    const lines = tracker.content.split('\n');
+    const issues: Array<{ line: number; entry: string; issues: string[] }> = [];
+    const suggestions: string[] = [];
+    
+    // Check entries in different sections
+    const sections = [
+      { header: '## Action Items', expectedType: 'action' as ItemType },
+      { header: '## Activity Log', expectedType: 'activity' as ItemType },
+      { header: '## Review Queue', expectedType: 'review' as ItemType },
+      { header: '## Someday/Maybe', expectedType: 'someday' as ItemType }
+    ];
+
+    for (const section of sections) {
+      const sectionLines = this.findSection(lines, section.header);
+      if (sectionLines) {
+        sectionLines.forEach((line, index) => {
+          if (line.trim().startsWith('-')) {
+            const validation = FormattingUtils.validateEntryFormat(line, section.expectedType);
+            if (!validation.isValid) {
+              const lineNumber = lines.findIndex(l => l === line) + 1;
+              issues.push({
+                line: lineNumber,
+                entry: line,
+                issues: validation.issues
+              });
+            }
+          }
+        });
+      }
+    }
+
+    // Generate suggestions
+    if (issues.length > 0) {
+      suggestions.push('Consider running format standardization on this tracker');
+      suggestions.push('Use FormattingUtils.standardizeEntry() to fix formatting issues');
+    }
+    
+    return {
+      isValid: issues.length === 0,
+      issues,
+      suggestions
+    };
+  }
+
+  /**
+   * v0.2.2: Get formatting statistics across all trackers
+   */
+  getFormattingStats(): {
+    totalTrackers: number;
+    trackersWithIssues: number;
+    commonIssues: Record<string, number>;
+  } {
+    // This would scan all trackers for formatting consistency
+    // For now, return basic stats structure
+    return {
+      totalTrackers: this.trackers.size,
+      trackersWithIssues: 0, // Would be calculated by running validation
+      commonIssues: {} // Would track most frequent formatting issues
+    };
   }
 }
