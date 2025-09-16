@@ -1,23 +1,25 @@
 # ChurnFlow Development Notes
 
-## Current Status: v0.2.1 Multi-Item Capture ✅ COMPLETE
+## Current Status: v0.2.2 Formatting Consistency ✅ COMPLETE
 
-**Major Achievement**: Single captures now generate multiple items across trackers!
+**Major Achievement**: Complete formatting consistency with proper section placement!
 
 ### What Works Perfectly:
-- Doug welder example: "Doug picked up his welder. Paid me $200. Mentioned leaf vacuum needs fixing and Ford 8n tractor work."
-  - ✅ Activity: Doug pickup & payment (gsc-dev Activity Log)
-  - ✅ Action: Record $200 income (gsc-dev Actions)  
-  - ✅ Someday: Fix leaf vacuum (outdoor-maintenance)
-  - ✅ Review: Ford 8n tractor evaluation (outdoor-maintenance)
-  - ✅ Task completion detection: Welder project done
-- Comprehensive test suite (14 tests)
-- Cross-tracker routing
-- ADHD-friendly brain dumps
+- **Formatting Consistency**: All entries use standardized FormattingUtils
+  - ✅ ISO dates (2025-09-16) and timestamps (2025-09-16 14:30)
+  - ✅ Priority indicators (🚨 ⏫ 🔼 🔻)
+  - ✅ Consistent entry templates for all types
+- **Section Placement**: Items go exactly where they should
+  - ✅ Automatic section creation with proper ordering
+  - ✅ Activities sorted chronologically (oldest first)
+  - ✅ Proper spacing (1 line before/after headers, no gaps between items)
+- **Comprehensive test suite**: 122 tests across 6 suites ✅
+- **Multi-item capture**: Doug welder example still works with new formatting
+- **ADHD-friendly**: Brain dumps with consistent, clean output
 
 ---
 
-## Next Version: v0.2.2 - Formatting Consistency
+## Next Version: v0.2.3 - Enhanced Workflows
 
 ### 🎯 Primary Goal: Standardize ALL Formatting Rules
 
