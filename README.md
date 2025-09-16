@@ -1,8 +1,16 @@
-# ChurnFlow MCP Server
+# ChurnFlow MCP Server v0.3.0
 
-> An ADHD-friendly productivity system powered by AI agents
+> An ADHD-friendly productivity system powered by AI agents and GitHub Copilot
 
-**ChurnFlow** is a Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Instead of fighting against how your brain works, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
+**ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with GitHub Copilot integration and comprehensive AI assistant support, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
+
+## 🎉 New in v0.3.0: GitHub Copilot Integration
+
+- **🤖 GitHub Copilot Ready**: Full MCP server integration with three AI tools
+- **🔧 Production Grade**: 122 comprehensive tests, robust error handling
+- **⚡ Multi-item Capture**: Single input generates multiple routed items
+- **📐 Perfect Formatting**: Consistent ISO dates, priority emojis, section placement
+- **🧠 ADHD-Optimized**: Brain dump style capture with minimal cognitive overhead
 
 ## 🧠 The Problem
 
@@ -47,51 +55,100 @@ Intelligent routing that understands your workflow:
 
 ### Prerequisites
 - Node.js 18+
-- An AI API key (OpenAI or Anthropic)
-- A Churn system directory structure
+- GitHub Copilot or compatible AI assistant
+- OpenAI API key for AI inference
+- Existing Churn system directory structure
 
 ### Installation
 
 ```bash
-npm install -g churnflow-mcp
+# Clone the repository
+git clone https://github.com/jgsteeler/churnflow-mcp.git
+cd churn-mcp
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
 ```
 
 ### Configuration
 
+1. **Create `churn.config.json`**:
+   ```json
+   {
+     "collectionsPath": "/path/to/your/Collections",
+     "trackingPath": "/path/to/your/tracking", 
+     "crossrefPath": "/path/to/crossref.json",
+     "aiProvider": "openai",
+     "aiApiKey": "your-openai-key",
+     "confidenceThreshold": 0.7
+   }
+   ```
+
+2. **Set up GitHub Copilot** (see [MCP-SETUP.md](MCP-SETUP.md) for complete guide)
+
+### Usage with GitHub Copilot
+
+1. **Configure GitHub Copilot** with ChurnFlow MCP server:
+   ```json
+   {
+     "mcpServers": {
+       "churnflow": {
+         "command": "tsx",
+         "args": ["/path/to/churn-mcp/src/index.ts"],
+         "cwd": "/path/to/churn-mcp"
+       }
+     }
+   }
+   ```
+
+2. **Start the MCP server**:
+   ```bash
+   npm run mcp
+   ```
+
+3. **Use with GitHub Copilot**:
+   - *"Use ChurnFlow to capture 'Need to call parts supplier about carburetor for John Deere restoration'"*
+   - *"What's the status of my ChurnFlow system?"*
+   - *"Show me my available ChurnFlow trackers"*
+
+### CLI Usage (Alternative)
+
 ```bash
-churn init --collections-path /path/to/your/Collections
-```
+# Direct capture via CLI
+npm run cli capture "Complex task with multiple components"
 
-### Usage with Claude/Warp
-
-```bash
-# Start the MCP server
-churn serve
-
-# Then in Warp with Claude:
-# "Capture this: I need to call the parts supplier about the carburetor"
-# "What should I focus on today?"
-# "I'm working on the Gibson website - track my progress"
+# Check system status
+npm run cli status
 ```
 
 ## 🎯 Core Features
 
-### Smart Capture
-- **Natural Language Input**: "Remind me to follow up with that consulting client next week"
-- **Context Inference**: Automatically routes to the right project tracker
-- **Voice Integration**: Capture thoughts while driving or working with your hands
-- **Multi-Device**: Phone, iPad, computer - capture anywhere
+### 🤖 AI Assistant Integration (v0.3.0)
+- **GitHub Copilot Ready**: Full MCP server with three tools (`capture`, `status`, `list_trackers`)
+- **Multi-AI Support**: Works with any MCP-compatible AI assistant
+- **Natural Conversations**: *"Use ChurnFlow to capture..."* or *"What should I work on?"*
+- **Cross-Interface Sync**: Seamless between AI assistants and CLI
 
-### Intelligent Processing
-- **Item Classification**: Action items, reviews, references, someday/maybe
-- **Priority Detection**: Deadlines, dependencies, and urgency analysis
-- **Tracker Management**: Auto-sync between active trackers and archived collections
+### 🧠 Smart Capture
+- **Multi-Item Processing**: Single brain dump generates multiple routed items
+- **Context Inference**: AI routes to appropriate trackers automatically
+- **Natural Language**: "Working on Gibson website, need to call client, update docs"
+- **Confidence-Based Routing**: High confidence items placed directly, low confidence flagged for review
 
-### ADHD-Optimized Workflows
-- **Dashboard View**: "What's important today?" without cognitive overhead
-- **Interruption Recovery**: "Where was I?" after context switches
-- **Hyperfocus Support**: Capture interrupting thoughts without breaking flow
-- **Executive Function Assistance**: AI handles the organizing so you can focus on doing
+### ✨ Perfect Formatting (v0.2.2)
+- **ISO Date Standards**: Consistent `2025-09-16` and `2025-09-16 14:30` formats
+- **Priority Indicators**: Visual emojis (🚨 ⏫ 🔼 🔻) for quick scanning
+- **Section Placement**: Items go exactly where they belong in tracker files
+- **ADHD-Friendly**: Clean, consistent output reduces cognitive load
+
+### 🔧 Production Ready
+- **122 Comprehensive Tests**: Full test coverage across all components
+- **Error Handling**: Graceful fallbacks ensure no thoughts are lost
+- **Emergency Capture**: Always saves input even when systems fail
+- **Multi-Item Support**: Doug welder example processes complex scenarios
 
 ## 🏢 About GSC Dev
 
@@ -108,12 +165,20 @@ We welcome contributions from the ADHD and neurodivergent community! Please see 
 
 ## 📋 Roadmap
 
-- [x] Project initialization and architecture design
-- [ ] Core MCP server with capture functionality  
-- [ ] AI inference engine for context and item type detection
-- [ ] Voice capture integration
-- [ ] Dashboard and review tools
-- [ ] Mobile app for capture on-the-go
+### ✅ Completed
+- [x] **v0.2.1**: Multi-item capture with cross-tracker routing
+- [x] **v0.2.2**: Complete formatting consistency and perfect section placement  
+- [x] **v0.3.0**: MCP server integration with GitHub Copilot support
+
+### 🎯 In Progress  
+- [ ] **v0.3.1**: Review Process system with AI assistant integration
+- [ ] Enhanced dashboard and review tools for both CLI and AI assistants
+- [ ] Confidence-based item flagging and review workflows
+
+### 🚀 Future
+- [ ] **v0.3.2+**: Voice capture integration building on MCP foundation
+- [ ] Mobile app for capture on-the-go with MCP sync
+- [ ] Advanced AI features: learning from user patterns
 - [ ] Community marketplace for custom trackers and workflows
 
 ## 📄 License

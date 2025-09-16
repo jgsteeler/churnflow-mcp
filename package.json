@@ -1,6 +1,6 @@
 {
   "name": "churnflow-mcp",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "An MCP server for the ChurnFlow ADHD-friendly productivity system",
   "main": "dist/index.js",
   "type": "module",
@@ -8,6 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
+    "mcp": "tsx src/index.ts",
     "cli": "tsx src/cli.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
