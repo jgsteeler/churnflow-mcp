@@ -1,8 +1,16 @@
 # ChurnFlow Development Notes
 
-## Current Status: v0.2.2 Formatting Consistency ✅ COMPLETE
+## Current Status: v0.3.0 MCP Server Integration 🚀 READY FOR RELEASE
 
-**Major Achievement**: Complete formatting consistency with proper section placement!
+**Major Achievement**: Full GitHub Copilot integration with MCP server!
+
+### v0.3.0 - MCP Server Integration ✅ COMPLETE:
+- **MCP Server Implementation**: Production-ready Model Context Protocol server
+- **GitHub Copilot Ready**: Three tools available - capture, status, list_trackers
+- **AI Assistant Integration**: Any MCP-compatible AI can use ChurnFlow
+- **Backward Compatible**: All v0.2.2 functionality preserved and enhanced
+- **Production Grade**: Comprehensive error handling, configuration loading
+- **Documentation Complete**: MCP-SETUP.md with integration guides
 
 ### What Works Perfectly:
 - **Formatting Consistency**: All entries use standardized FormattingUtils
@@ -19,7 +27,7 @@
 
 ---
 
-## Next Version: v0.2.3 - Review Process System 🎯
+## Next Version: v0.3.1 - Review Process System 🎯
 
 **Focus: Follow-up Assurance over Perfect Routing**
 
@@ -32,11 +40,13 @@ Key insight: If action items get done, activity logs get reviewed before sync, a
 3. **Quick validation interface** for ALL items (even 95% confident AI routing)
 4. **Easy corrections**: tracker switching, priority changes, tag management, type conversion
 5. **Universal review command** for comprehensive item management
+6. **MCP Integration**: Review tools available to AI assistants
 
-### Implementation Plan: docs/v0.2.3-PLAN.md
+### Implementation Plan: docs/v0.3.1-PLAN.md (renamed from v0.2.3-PLAN.md)
 - Two-tier system: auto-placed with review flags + review queue for low confidence
 - CLI commands for quick edits: move, priority, tags, type conversion
 - Dashboard integration with review indicators
+- MCP server tools for AI assistant review workflows
 - Focus on workflow completion rather than routing perfection
 
 ---
@@ -77,10 +87,10 @@ Key insight: If action items get done, activity logs get reviewed before sync, a
 
 ---
 
-## v0.2.4+ Future Roadmap
+## v0.3.2+ Future Roadmap
 
 ### Voice Capture System
-**Deferred to v0.2.4** - Will build on solid review foundation
+**Deferred to v0.3.2** - Will build on solid review foundation and MCP integration
 **Benefits:**
 - Ultimate ADHD-friendly interface
 - Hands-free capture while working
@@ -104,22 +114,30 @@ Key insight: If action items get done, activity logs get reviewed before sync, a
 ## Development Environment Notes
 
 ### Current Setup:
-- ✅ ChurnFlow v0.2.1 with multi-item capture
+- ✅ ChurnFlow v0.3.0 with MCP server integration
+- ✅ GitHub Copilot ready with full AI assistant support
 - ✅ 15 active trackers loaded
 - ✅ Shell alias `churn capture "..."` working globally
-- ✅ Comprehensive test coverage
+- ✅ MCP server: `npm run mcp` for AI assistant integration
+- ✅ Comprehensive test coverage: 122 tests across 6 suites
 - ✅ Git-flow workflow established
 
 ### Testing Commands:
 ```bash
-# Test multi-item capture
+# Test multi-item capture (CLI)
 churn capture "Complex scenario with multiple actionable items"
 
-# Check system status
+# Check system status (CLI)
 churn status
 
-# Run tests
-npm test -- tests/core/InferenceEngine.test.ts
+# Start MCP server for AI assistants
+npm run mcp
+
+# Run comprehensive tests
+npm test
+
+# Build for production
+npm run build && node dist/index.js
 ```
 
 ### Weekly Review Workflow Test:
@@ -131,13 +149,14 @@ Use ChurnFlow CLI during your weekly collection review to:
 
 ---
 
-## Session Goals Summary:
+## Version History Summary:
 1. ✅ **v0.2.1 Complete**: Multi-item capture pushed to repository
-2. 🎯 **Next Session**: v0.2.2 formatting consistency
-3. 🤔 **Decision Needed**: Voice capture vs Review process for v0.2.3
-4. 📋 **Test**: Use CLI during weekly review to gather real usage data
+2. ✅ **v0.2.2 Complete**: Formatting consistency with 122 comprehensive tests
+3. ✅ **v0.3.0 Complete**: MCP server integration, GitHub Copilot ready
+4. 🎯 **v0.3.1 Planned**: Review Process system for comprehensive item management
+5. 📋 **Future**: Voice capture, AI assistant enhancements, mobile support
 
 ---
 
-*Notes captured: 2025-09-14 22:52*  
-*Status: Ready for v0.2.2 development*
+*Notes last updated: 2025-09-16 13:28*  
+*Status: Ready for v0.3.0 release and GitHub Copilot integration*
