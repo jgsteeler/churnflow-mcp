@@ -19,105 +19,85 @@
 
 ---
 
-## Next Version: v0.2.3 - Enhanced Workflows
+## Next Version: v0.2.3 - Review Process System 🎯
 
-### 🎯 Primary Goal: Standardize ALL Formatting Rules
+**Focus: Follow-up Assurance over Perfect Routing**
 
-**Issues Identified:**
-- Inconsistent date formats across different item types
-- Mixed checkbox styles (`- [ ]` vs `- [x]`)
-- Varying header structures between trackers
-- Timestamp formats not standardized
-- Activity log entries need consistent formatting
-- Action items need consistent tag structure
+Pragmatic approach: Ensure items get human attention rather than perfect AI placement.
+Key insight: If action items get done, activity logs get reviewed before sync, and refs/reviews land somewhere appropriate, exact tracker placement is less critical.
 
-### 📋 Formatting Rules to Define:
+### Core Requirements:
+1. **Surface low-confidence items** that weren't routed immediately
+2. **Dashboard indicators** for items needing review
+3. **Quick validation interface** for ALL items (even 95% confident AI routing)
+4. **Easy corrections**: tracker switching, priority changes, tag management, type conversion
+5. **Universal review command** for comprehensive item management
 
-#### Item Entry Formats:
-```markdown
-# Action Items
-- [ ] #tag-name [YYYY-MM-DD] Specific actionable task description
-- [x] #tag-name [YYYY-MM-DD] Completed task ✅ YYYY-MM-DD
-
-# Activity Log  
-- [YYYY-MM-DD HH:MM] Context/update description with relevant details
-
-# References
-- [YYYY-MM-DD] #reference Important information or context to remember
-
-# Someday Items
-- [ ] #someday [captured-YYYY-MM-DD] Future possibility or idea to consider
-
-# Review Items  
-- [ ] #review [YYYY-MM-DD] Item requiring human decision or evaluation
-```
-
-#### Tracker Header Standards:
-```markdown
-# [Tracker Name] — Tracker — [Month YYYY]
-
-## Activity Log
-[Recent activities first]
-
-## Action Items  
-[Active tasks]
-
-## References
-[Important context]
-
-## Review Queue
-[Items needing decisions]
-```
-
-#### Date/Time Standards:
-- **Timestamps**: `YYYY-MM-DD HH:MM` (24h format)
-- **Due dates**: `📅 YYYY-MM-DD` 
-- **Completion**: `✅ YYYY-MM-DD`
-- **Capture date**: `[YYYY-MM-DD]` at start of entry
-
-### 🔧 Implementation Tasks for v0.2.2:
-1. **Define formatting constants** in types/churn.ts
-2. **Update InferenceEngine** to use standardized formats
-3. **Enhance TrackerManager** with formatting utilities
-4. **Add formatting validation** to prevent inconsistencies  
-5. **Update all generated entries** to use new standards
-6. **Add tests** for formatting consistency
-7. **Migration tool** to standardize existing entries (optional)
+### Implementation Plan: docs/v0.2.3-PLAN.md
+- Two-tier system: auto-placed with review flags + review queue for low confidence
+- CLI commands for quick edits: move, priority, tags, type conversion
+- Dashboard integration with review indicators
+- Focus on workflow completion rather than routing perfection
 
 ---
 
-## Future Development Decision Point
+## v0.2.2 Formatting Consistency ✅ COMPLETED
 
-### Option A: Voice Capture (v0.2.3)
+### 🎯 Goal Achieved: Complete formatting standardization with perfect section placement
+
+**Issues RESOLVED:**
+- ✅ Standardized date formats: `2025-09-16` and `2025-09-16 14:30`
+- ✅ Consistent checkbox styles and entry prefixes
+- ✅ Proper section headers with spacing rules
+- ✅ Activity entries sorted chronologically (oldest first)
+- ✅ Items placed directly under correct section headers
+- ✅ Automatic section creation with proper ordering
+
+### 📋 Formatting Standards IMPLEMENTED:
+
+**FormattingUtils Class:** 52 comprehensive tests ✅
+- ISO date/timestamp formats
+- Priority indicators (🚨 ⏫ 🔼 🔻)
+- Entry templates for all types
+- Validation and standardization methods
+
+**Section Placement:** 12 comprehensive tests ✅  
+- Proper blank line spacing (1 before/after headers, none between items)
+- Standard section ordering: Activity Log → Action Items → Review → References → Someday → Notes
+- Mixed content handling and edge cases
+
+### 🔧 Implementation COMPLETED:
+1. ✅ **FormattingUtils constants** with comprehensive standards
+2. ✅ **InferenceEngine updated** to use FormattingUtils for consistent output
+3. ✅ **TrackerManager enhanced** with section placement and validation
+4. ✅ **Formatting validation** prevents inconsistencies
+5. ✅ **All generated entries** use new standards  
+6. ✅ **Comprehensive tests** - 122 tests across 6 suites
+7. ✅ **Legacy test compatibility** maintained
+
+---
+
+## v0.2.4+ Future Roadmap
+
+### Voice Capture System
+**Deferred to v0.2.4** - Will build on solid review foundation
 **Benefits:**
 - Ultimate ADHD-friendly interface
 - Hands-free capture while working
 - Natural speech-to-multi-item processing
 - Mobile accessibility
 
-**Challenges:**
-- Speech-to-text integration complexity
-- Audio processing requirements
-- Platform-specific implementations
+**Integration with Review Process:**
+- Voice captures can go straight to review queue
+- Lower confidence threshold for speech input
+- Audio transcription confidence scoring
+- Review process handles ambiguous voice input
 
-### Option B: Review Process (v0.2.3)  
-**Benefits:**
-- Complete the capture → review → action workflow
-- Handle low-confidence AI suggestions
-- Manual review interface for complex decisions
-- Task completion workflow
-
-**Challenges:**
-- UI/interface design decisions
-- Review queue management
-- Decision tracking and follow-up
-
-### 💭 Recommendation:
-Consider **Review Process first** because:
-1. Completes the core workflow loop
-2. Handles current low-confidence captures better
-3. Provides foundation for voice capture refinement
-4. Less technical complexity than audio processing
+### Other Future Enhancements:
+- Machine learning from review decisions
+- Integration with calendar/scheduling
+- Mobile-friendly review interface
+- Batch operations and automation
 
 ---
 
