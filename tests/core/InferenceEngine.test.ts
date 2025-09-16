@@ -114,17 +114,8 @@ describe('InferenceEngine', () => {
     });
 
     it('should generate multiple items from complex Doug welder capture', async () => {
-      const mockResponse = createMockOpenAIResponse(MOCK_MULTI_ITEM_RESPONSE);
-      mockCreate.mockResolvedValue(mockResponse);
-
-      const input: CaptureInput = {
-        text: SAMPLE_CAPTURE_INPUTS.dougWelder,
-        inputType: 'text'
-      };
-
-      const result = await inferenceEngine.inferCapture(input);
-
-      expect(result).toEqual({
+      // Mock AI response with raw descriptions (v0.2.2 format)
+      const mockAIResponse = {
         primaryTracker: 'gsc-dev',
         confidence: 0.95,
         overallReasoning: 'Doug welder pickup with multiple actionable items',
@@ -133,28 +124,32 @@ describe('InferenceEngine', () => {
             tracker: 'gsc-dev',
             itemType: 'activity',
             priority: 'medium',
-            content: '- [2024-01-15] Doug picked up his welder and paid $200 cash.',
+            description: 'Doug picked up his welder and paid $200 cash',
+            tag: 'gsc-dev',
             reasoning: 'Activity log entry capturing what happened'
           },
           {
             tracker: 'gsc-dev',
             itemType: 'action',
             priority: 'medium',
-            content: '- [ ] #task Record $200 payment from Doug as income.',
+            description: 'Record $200 payment from Doug as income',
+            tag: 'gsc-dev',
             reasoning: 'Payment needs to be recorded in accounting'
           },
           {
             tracker: 'outdoor-maintenance',
             itemType: 'someday',
             priority: 'low',
-            content: '- [ ] #someday Fix Doug\'s leaf vacuum that needs repair.',
+            description: 'Fix Doug\'s leaf vacuum that needs repair',
+            tag: 'outdoor-maintenance',
             reasoning: 'Future work opportunity mentioned'
           },
           {
             tracker: 'outdoor-maintenance',
             itemType: 'review',
             priority: 'low',
-            content: '- [ ] #review Look into Doug\'s Ford 8n tractor maintenance needs.',
+            description: 'Look into Doug\'s Ford 8n tractor maintenance needs',
+            tag: 'outdoor-maintenance',
             reasoning: 'Potential work that needs evaluation'
           }
         ],
@@ -166,7 +161,37 @@ describe('InferenceEngine', () => {
           }
         ],
         requiresReview: false
-      });
+      };
+      
+      const mockResponse = createMockOpenAIResponse(mockAIResponse);
+      mockCreate.mockResolvedValue(mockResponse);
+
+      const input: CaptureInput = {
+        text: SAMPLE_CAPTURE_INPUTS.dougWelder,
+        inputType: 'text'
+      };
+
+      const result = await inferenceEngine.inferCapture(input);
+
+      expect(result.primaryTracker).toBe('gsc-dev');
+      expect(result.confidence).toBe(0.95);
+      expect(result.overallReasoning).toBe('Doug welder pickup with multiple actionable items');
+      expect(result.generatedItems).toHaveLength(4);
+      expect(result.taskCompletions).toHaveLength(1);
+      expect(result.requiresReview).toBe(false);
+      
+      // Check that FormattingUtils properly formatted the entries
+      const activityItem = result.generatedItems.find(item => item.itemType === 'activity')!;
+      expect(activityItem.content).toMatch(/^- \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] Doug picked up his welder and paid \$200 cash$/);
+      
+      const actionItem = result.generatedItems.find(item => item.itemType === 'action')!;
+      expect(actionItem.content).toBe('- [ ] #task Record $200 payment from Doug as income #gsc-dev');
+      
+      const somedayItem = result.generatedItems.find(item => item.itemType === 'someday')!;
+      expect(somedayItem.content).toMatch(/^- \[ \] #someday \[\d{4}-\d{2}-\d{2}\] Fix Doug's leaf vacuum that needs repair #outdoor-maintenance$/);
+      
+      const reviewItem = result.generatedItems.find(item => item.itemType === 'review')!;
+      expect(reviewItem.content).toMatch(/^- \[ \] #review \[\d{4}-\d{2}-\d{2}\] Look into Doug's Ford 8n tractor maintenance needs \(confidence: 95%\)$/);
 
       expect(mockCreate).toHaveBeenCalledWith({
         model: 'gpt-4o-mini',
@@ -186,7 +211,26 @@ describe('InferenceEngine', () => {
     });
 
     it('should handle single item captures properly', async () => {
-      const mockResponse = createMockOpenAIResponse(MOCK_SINGLE_ITEM_RESPONSE);
+      // Mock AI response with raw description (v0.2.2 format)
+      const mockAIResponse = {
+        primaryTracker: 'project-55',
+        confidence: 0.85,
+        overallReasoning: 'Simple action item for project development',
+        generatedItems: [
+          {
+            tracker: 'project-55',
+            itemType: 'action',
+            priority: 'high',
+            description: 'Fix the bug in user authentication module',
+            tag: 'project-55',
+            reasoning: 'Clear actionable task for project'
+          }
+        ],
+        taskCompletions: [],
+        requiresReview: false
+      };
+      
+      const mockResponse = createMockOpenAIResponse(mockAIResponse);
       mockCreate.mockResolvedValue(mockResponse);
 
       const input: CaptureInput = {
@@ -202,7 +246,7 @@ describe('InferenceEngine', () => {
         tracker: 'project-55',
         itemType: 'action',
         priority: 'high',
-        content: '- [ ] #task Fix the bug in user authentication module.',
+        content: '- [ ] #task Fix the bug in user authentication module #project-55 ⏫',
         reasoning: 'Clear actionable task for project'
       });
       expect(result.taskCompletions).toHaveLength(0);
@@ -530,8 +574,12 @@ describe('InferenceEngine', () => {
       const result = await inferenceEngine.inferCapture(input);
 
       expect(result.generatedItems).toHaveLength(1);
-      expect(result.generatedItems[0].content).toMatch(/^- \[ \] #task Remember to do something important 📅 \d{4}-\d{2}-\d{2}$/);
       expect(result.generatedItems[0].itemType).toBe('review');
+      // v0.2.2: Fallback uses FormattingUtils.formatEntry for review items
+      expect(result.generatedItems[0].content).toMatch(/^- \[ \] #review \[\d{4}-\d{2}-\d{2}\] Remember to do something important \(confidence: 10%\)$/);
+      expect(result.primaryTracker).toBe('review');
+      expect(result.confidence).toBe(0.1);
+      expect(result.requiresReview).toBe(true);
     });
   });
 });
