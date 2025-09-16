@@ -24,10 +24,11 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { CaptureEngine } from './core/CaptureEngine.js';
-import { CaptureInput, CaptureResult } from './types/churn.js';
+import { CaptureInput, CaptureResult, ChurnConfig } from './types/churn.js';
 
 // Global capture engine instance
 let captureEngine: CaptureEngine | null = null;
+let config: ChurnConfig | null = null;
 
 /**
  * Available MCP tools for AI assistants
@@ -80,11 +81,41 @@ const TOOLS: Tool[] = [
 ];
 
 /**
+ * Load configuration
+ */
+async function loadConfig(): Promise<ChurnConfig> {
+  if (config) return config;
+  
+  // Try to load from churn.config.json
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    const configPath = path.resolve(process.cwd(), 'churn.config.json');
+    const configData = await fs.readFile(configPath, 'utf-8');
+    config = JSON.parse(configData);
+    return config!;
+  } catch (error) {
+    // Fallback config for development
+    config = {
+      collectionsPath: '/Users/jack/code/Collections/Churn/Collections',
+      trackingPath: '/Users/jack/code/Collections/Churn/tracking', 
+      crossrefPath: '/Users/jack/code/Collections/Churn/crossref.json',
+      aiProvider: 'openai',
+      aiApiKey: process.env.OPENAI_API_KEY || '',
+      confidenceThreshold: 0.7
+    };
+    return config;
+  }
+}
+
+/**
  * Initialize the capture engine
  */
 async function initializeCaptureEngine(): Promise<void> {
   if (!captureEngine) {
-    captureEngine = new CaptureEngine();
+    const churnConfig = await loadConfig();
+    captureEngine = new CaptureEngine(churnConfig);
     await captureEngine.initialize();
   }
 }
@@ -102,9 +133,8 @@ async function handleCapture(args: any): Promise<CallToolResult> {
 
     const input: CaptureInput = {
       text: args.text,
-      priority: args.priority || 'medium',
-      context: args.context,
-      source: 'mcp',
+      inputType: 'text',
+      forceContext: args.context,
     };
 
     const result: CaptureResult = await captureEngine.capture(input);
@@ -117,6 +147,7 @@ async function handleCapture(args: any): Promise<CallToolResult> {
             text: `Capture failed: ${result.error}`,
           },
         ],
+        isError: true,
       };
     }
 
@@ -124,24 +155,24 @@ async function handleCapture(args: any): Promise<CallToolResult> {
     const summary = [
       `✅ Capture Successful!`,
       `📁 Primary Tracker: ${result.primaryTracker}`,
-      `🎯 Confidence: ${result.confidence}%`,
-      `📊 Generated ${result.generatedItems?.length || 0} items`,
+      `🎯 Confidence: ${Math.round(result.confidence * 100)}%`,
+      `📊 Generated ${result.itemResults?.length || 0} items`,
       '',
     ];
 
-    if (result.generatedItems && result.generatedItems.length > 0) {
+    if (result.itemResults && result.itemResults.length > 0) {
       summary.push('📝 Items Generated:');
-      result.generatedItems.forEach(item => {
-        summary.push(`  ✅ ${item.type} → ${item.tracker}`);
+      result.itemResults.forEach(item => {
+        summary.push(`  ✅ ${item.itemType} → ${item.tracker}`);
         summary.push(`     ${item.formattedEntry}`);
       });
     }
 
-    if (result.taskCompletions && result.taskCompletions.length > 0) {
+    if (result.completedTasks && result.completedTasks.length > 0) {
       summary.push('');
       summary.push('🎯 Task Completions:');
-      result.taskCompletions.forEach(completion => {
-        summary.push(`  ✅ ${completion.type} in ${completion.tracker}`);
+      result.completedTasks.forEach(completion => {
+        summary.push(`  ✅ completion in ${completion.tracker}`);
         summary.push(`     ${completion.description}`);
       });
     }
@@ -153,6 +184,7 @@ async function handleCapture(args: any): Promise<CallToolResult> {
           text: summary.join('\n'),
         },
       ],
+      isError: false,
     };
   } catch (error) {
     return {
@@ -162,6 +194,7 @@ async function handleCapture(args: any): Promise<CallToolResult> {
           text: `Error during capture: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
+      isError: true,
     };
   }
 }
@@ -202,6 +235,7 @@ async function handleStatus(): Promise<CallToolResult> {
           text: statusLines.join('\n'),
         },
       ],
+      isError: false,
     };
   } catch (error) {
     return {
@@ -211,6 +245,7 @@ async function handleStatus(): Promise<CallToolResult> {
           text: `Error getting status: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
+      isError: true,
     };
   }
 }
@@ -227,12 +262,11 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
     }
 
     // Get all trackers through the capture engine's tracker manager
-    const status = await captureEngine.getStatus();
-    const trackers = captureEngine['trackerManager']?.getAllTrackers() || [];
+    const trackers = captureEngine['trackerManager']?.getTrackersByContext() || [];
     
     let filteredTrackers = trackers;
     if (args.context) {
-      filteredTrackers = trackers.filter(tracker => 
+      filteredTrackers = trackers.filter((tracker: any) => 
         tracker.frontmatter.contextType === args.context
       );
     }
@@ -245,7 +279,7 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
     if (filteredTrackers.length === 0) {
       trackerLines.push('No trackers found matching criteria.');
     } else {
-      filteredTrackers.forEach(tracker => {
+      filteredTrackers.forEach((tracker: any) => {
         const context = tracker.frontmatter.contextType || 'undefined';
         const mode = tracker.frontmatter.mode || 'standard';
         trackerLines.push(`📁 ${tracker.frontmatter.tag} (${tracker.frontmatter.friendlyName})`);
@@ -264,6 +298,7 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
           text: trackerLines.join('\n'),
         },
       ],
+      isError: false,
     };
   } catch (error) {
     return {
@@ -273,6 +308,7 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
           text: `Error listing trackers: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
+      isError: true,
     };
   }
 }
@@ -281,17 +317,13 @@ async function handleListTrackers(args: any): Promise<CallToolResult> {
  * Main server setup
  */
 async function main(): Promise<void> {
-  const server = new Server(
-    {
-      name: 'churnflow-mcp',
-      version: '0.2.2',
+  const server = new Server({
+    name: 'churnflow-mcp',
+    version: '0.2.2',
+    capabilities: {
+      tools: {},
     },
-    {
-      capabilities: {
-        tools: {},
-      },
-    }
-  );
+  });
 
   // Handle tool listing
   server.setRequestHandler(ListToolsRequestSchema, async () => {
