@@ -5,8 +5,11 @@ import {
   Tracker, 
   TrackerFrontmatter, 
   CrossrefEntry, 
-  ChurnConfig 
+  ChurnConfig,
+  ItemType,
+  FORMATTING_CONSTANTS 
 } from '../types/churn.js';
+import { FormattingUtils } from '../utils/FormattingUtils.js';
 
 /**
  * Manages reading, parsing, and updating Churn system trackers
@@ -260,5 +263,131 @@ export class TrackerManager {
    */
   async refresh(): Promise<void> {
     await this.initialize();
+  }
+
+  /**
+   * v0.2.2: Create a properly formatted entry using FormattingUtils
+   */
+  createFormattedEntry(
+    itemType: ItemType, 
+    description: string, 
+    options: {
+      tag?: string;
+      priority?: 'critical' | 'high' | 'medium' | 'low';
+      dueDate?: Date;
+      confidence?: number;
+    } = {}
+  ): string {
+    return FormattingUtils.formatEntry(itemType, description, options);
+  }
+
+  /**
+   * v0.2.2: Append a formatted entry to a tracker with validation
+   */
+  async appendFormattedEntry(
+    tag: string, 
+    itemType: ItemType,
+    description: string,
+    options: {
+      tag?: string;
+      priority?: 'critical' | 'high' | 'medium' | 'low';
+      dueDate?: Date;
+      confidence?: number;
+    } = {}
+  ): Promise<boolean> {
+    // Create properly formatted entry
+    const formattedEntry = this.createFormattedEntry(itemType, description, options);
+    
+    // Validate the formatting
+    const validation = FormattingUtils.validateEntryFormat(formattedEntry, itemType);
+    if (!validation.isValid) {
+      console.warn(`Formatting validation failed for ${itemType}:`, validation.issues);
+      console.warn('Entry:', formattedEntry);
+    }
+    
+    // Use appropriate append method based on item type
+    if (itemType === 'activity') {
+      return await this.appendActivityToTracker(tag, formattedEntry);
+    } else {
+      return await this.appendToTracker(tag, formattedEntry);
+    }
+  }
+
+  /**
+   * v0.2.2: Validate existing entries in a tracker for formatting consistency
+   */
+  async validateTrackerFormatting(tag: string): Promise<{
+    isValid: boolean;
+    issues: Array<{ line: number; entry: string; issues: string[] }>;
+    suggestions: string[];
+  }> {
+    const tracker = this.trackers.get(tag);
+    if (!tracker) {
+      return {
+        isValid: false,
+        issues: [{ line: 0, entry: '', issues: ['Tracker not found'] }],
+        suggestions: []
+      };
+    }
+
+    const lines = tracker.content.split('\n');
+    const issues: Array<{ line: number; entry: string; issues: string[] }> = [];
+    const suggestions: string[] = [];
+    
+    // Check entries in different sections
+    const sections = [
+      { header: '## Action Items', expectedType: 'action' as ItemType },
+      { header: '## Activity Log', expectedType: 'activity' as ItemType },
+      { header: '## Review Queue', expectedType: 'review' as ItemType },
+      { header: '## Someday/Maybe', expectedType: 'someday' as ItemType }
+    ];
+
+    for (const section of sections) {
+      const sectionLines = this.findSection(lines, section.header);
+      if (sectionLines) {
+        sectionLines.forEach((line, index) => {
+          if (line.trim().startsWith('-')) {
+            const validation = FormattingUtils.validateEntryFormat(line, section.expectedType);
+            if (!validation.isValid) {
+              const lineNumber = lines.findIndex(l => l === line) + 1;
+              issues.push({
+                line: lineNumber,
+                entry: line,
+                issues: validation.issues
+              });
+            }
+          }
+        });
+      }
+    }
+
+    // Generate suggestions
+    if (issues.length > 0) {
+      suggestions.push('Consider running format standardization on this tracker');
+      suggestions.push('Use FormattingUtils.standardizeEntry() to fix formatting issues');
+    }
+    
+    return {
+      isValid: issues.length === 0,
+      issues,
+      suggestions
+    };
+  }
+
+  /**
+   * v0.2.2: Get formatting statistics across all trackers
+   */
+  getFormattingStats(): {
+    totalTrackers: number;
+    trackersWithIssues: number;
+    commonIssues: Record<string, number>;
+  } {
+    // This would scan all trackers for formatting consistency
+    // For now, return basic stats structure
+    return {
+      totalTrackers: this.trackers.size,
+      trackersWithIssues: 0, // Would be calculated by running validation
+      commonIssues: {} // Would track most frequent formatting issues
+    };
   }
 }

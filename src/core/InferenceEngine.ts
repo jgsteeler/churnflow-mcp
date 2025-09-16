@@ -4,9 +4,11 @@ import {
   InferenceResult, 
   ChurnConfig, 
   ItemType, 
-  Priority 
+  Priority,
+  FORMATTING_CONSTANTS 
 } from '../types/churn.js';
 import { TrackerManager } from './TrackerManager.js';
+import { FormattingUtils } from '../utils/FormattingUtils.js';
 
 /**
  * AI-powered inference engine for ChurnFlow capture system
@@ -77,6 +79,7 @@ Your job is to:
 3. Generate separate entries for each distinct item (action, review, reference, someday, activity)
 4. Detect if the input indicates completion of existing tasks
 5. Route each item to the appropriate tracker
+6. **v0.2.2 NEW**: Generate content using standardized formatting - DO NOT format entries, just provide raw description
 
 Key principles for ADHD brains:
 - One capture can contain multiple items - extract them all
@@ -86,6 +89,12 @@ Key principles for ADHD brains:
 - Review items need human decision (go to review queue)
 - Someday items are future possibilities
 - Look for task completions ("Doug picked up his welder" = task done)
+
+FORMATTING RULES (v0.2.2):
+- DO NOT format entries with markdown prefixes, checkboxes, or timestamps
+- Provide raw description text only - the system will apply consistent formatting
+- Focus on content analysis and routing
+- Let FormattingUtils handle all date/time/checkbox formatting
 
 Always respond with valid JSON in this format:
 {
@@ -97,7 +106,8 @@ Always respond with valid JSON in this format:
       "tracker": "tag-name",
       "itemType": "action|review|reference|someday|activity",
       "priority": "critical|high|medium|low",
-      "content": "- [date] Formatted entry for this specific item",
+      "description": "Raw content description without formatting",
+      "tag": "relevant-hashtag-without-#",
       "reasoning": "Why this item goes here"
     }
   ],
@@ -151,20 +161,33 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   }
 
   /**
-   * Parse the AI response into our result format
+   * Parse the AI response into our result format (v0.2.2 with FormattingUtils)
    */
   private parseInferenceResult(aiResult: any, input: CaptureInput): InferenceResult {
     const normalizedConfidence = Math.max(0, Math.min(1, aiResult.confidence || 0.5));
     
-    // Parse generated items
+    // Parse generated items with v0.2.2 formatting
     const generatedItems: any[] = [];
     if (aiResult.generatedItems && Array.isArray(aiResult.generatedItems)) {
       for (const item of aiResult.generatedItems) {
+        const itemType = this.validateItemType(item.itemType);
+        const priority = this.validatePriority(item.priority);
+        const description = item.description || item.content || input.text;
+        const tag = item.tag || this.extractTagFromTracker(item.tracker);
+        
+        // Use FormattingUtils to generate properly formatted content
+        const formattedContent = FormattingUtils.formatEntry(itemType, description, {
+          tag,
+          priority,
+          includePriority: priority !== 'medium', // Only show non-medium priority
+          confidence: normalizedConfidence
+        });
+        
         generatedItems.push({
           tracker: item.tracker || 'review',
-          itemType: this.validateItemType(item.itemType),
-          priority: this.validatePriority(item.priority),
-          content: item.content || this.fallbackFormat(input.text),
+          itemType,
+          priority,
+          content: formattedContent,
           reasoning: item.reasoning || 'Generated item'
         });
       }
@@ -172,11 +195,15 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     
     // If no items generated, create a fallback item
     if (generatedItems.length === 0) {
+      const fallbackContent = FormattingUtils.formatEntry('review', input.text, {
+        confidence: normalizedConfidence
+      });
+      
       generatedItems.push({
         tracker: aiResult.primaryTracker || 'review',
         itemType: 'review',
         priority: 'medium',
-        content: this.fallbackFormat(input.text),
+        content: fallbackContent,
         reasoning: 'Fallback item creation'
       });
     }
@@ -204,9 +231,13 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   }
 
   /**
-   * Fallback inference when AI fails
+   * Fallback inference when AI fails (v0.2.2 with FormattingUtils)
    */
   private fallbackInference(input: CaptureInput): InferenceResult {
+    const fallbackContent = FormattingUtils.formatEntry('review', input.text, {
+      confidence: 0.1
+    });
+    
     return {
       primaryTracker: 'review',
       confidence: 0.1,
@@ -215,7 +246,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
         tracker: 'review',
         itemType: 'review',
         priority: 'medium',
-        content: this.fallbackFormat(input.text),
+        content: fallbackContent,
         reasoning: 'Fallback due to AI failure'
       }],
       taskCompletions: [],
@@ -224,11 +255,16 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   }
 
   /**
-   * Basic formatting fallback
+   * Extract tag from tracker name (for when AI doesn't provide explicit tag)
    */
-  private fallbackFormat(text: string): string {
-    const timestamp = new Date().toISOString().split('T')[0];
-    return `- [ ] #task ${text} 📅 ${timestamp}`;
+  private extractTagFromTracker(trackerName: string): string {
+    // Most tracker names are the same as their tags
+    // Remove common suffixes and normalize
+    return trackerName
+      .replace('-tracker', '')
+      .replace('_tracker', '')
+      .replace(/\s+/g, '-')
+      .toLowerCase();
   }
 
   /**
