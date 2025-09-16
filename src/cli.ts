@@ -73,18 +73,40 @@ class ChurnCLI {
       
       if (result.success) {
         console.log('✅ Capture Successful!');
-        console.log(`📁 Tracker: ${result.tracker}`);
-        console.log(`🏷️  Type: ${result.itemType}`);
+        console.log(`📁 Primary Tracker: ${result.primaryTracker}`);
         console.log(`🎯 Confidence: ${Math.round(result.confidence * 100)}%`);
-        console.log(`📝 Entry: ${result.formattedEntry}`);
+        console.log(`📊 Generated ${result.itemResults.length} items`);
+        
+        if (result.completedTasks.length > 0) {
+          console.log(`✅ Detected ${result.completedTasks.length} task completions`);
+        }
+        
+        console.log('\n📝 Items Generated:');
+        for (const item of result.itemResults) {
+          const status = item.success ? '✅' : '❌';
+          console.log(`  ${status} ${item.itemType} → ${item.tracker}`);
+          console.log(`     ${item.formattedEntry}`);
+          if (item.error) {
+            console.log(`     Error: ${item.error}`);
+          }
+        }
+        
+        if (result.completedTasks.length > 0) {
+          console.log('\n🎉 Task Completions:');
+          for (const completion of result.completedTasks) {
+            console.log(`  ✅ ${completion.description} (${completion.tracker})`);
+          }
+        }
         
         if (result.requiresReview) {
-          console.log('⚠️  Requires human review');
+          console.log('\n⚠️  Requires human review');
         }
       } else {
         console.log('❌ Capture Failed');
         console.log(`❗ Error: ${result.error}`);
-        console.log(`🚨 Emergency entry: ${result.formattedEntry}`);
+        if (result.itemResults.length > 0) {
+          console.log(`🚨 Emergency entry: ${result.itemResults[0].formattedEntry}`);
+        }
       }
       
     } catch (error) {

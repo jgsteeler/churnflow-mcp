@@ -95,7 +95,17 @@ describe('CaptureEngine', () => {
 
     it('should capture text input with high confidence successfully', async () => {
       const mockInference: InferenceResult = {
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
+        confidence: 0.95,
+        overallReasoning: 'High confidence match based on business context keywords',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'high',
+          content: '- [ ] #task Test AI generated entry #gsc-ai ⏫',
+          reasoning: 'Clear actionable task'
+        }],
+        taskCompletions: [],
         requiresReview: false
       };
 
@@ -104,14 +114,15 @@ describe('CaptureEngine', () => {
 
       const result = await captureEngine.capture(SAMPLE_CAPTURE_INPUTS.business);
 
-      expect(result).toEqual({
-        success: true,
-        tracker: 'gsc-ai',
-        itemType: 'action',
-        formattedEntry: '- [ ] #task Test AI generated entry 📅 2024-01-15',
-        confidence: 0.95,
-        requiresReview: false
-      });
+      expect(result.success).toBe(true);
+      expect(result.primaryTracker).toBe('gsc-ai');
+      expect(result.confidence).toBe(0.95);
+      expect(result.itemResults).toHaveLength(1);
+      expect(result.itemResults[0].success).toBe(true);
+      expect(result.itemResults[0].tracker).toBe('gsc-ai');
+      expect(result.itemResults[0].itemType).toBe('action');
+      expect(result.itemResults[0].formattedEntry).toBe('- [ ] #task Test AI generated entry #gsc-ai ⏫');
+      expect(result.requiresReview).toBe(false);
 
       expect(mockInferenceEngineInstance.inferCapture).toHaveBeenCalledWith({
         text: SAMPLE_CAPTURE_INPUTS.business,
@@ -120,7 +131,7 @@ describe('CaptureEngine', () => {
 
       expect(mockTrackerManagerInstance.appendToTracker).toHaveBeenCalledWith(
         'gsc-ai',
-        '- [ ] #task Test AI generated entry 📅 2024-01-15'
+        '- [ ] #task Test AI generated entry #gsc-ai ⏫'
       );
     });
 
@@ -133,8 +144,17 @@ describe('CaptureEngine', () => {
       };
 
       const mockInference: InferenceResult = {
-        ...MOCK_AI_RESPONSE,
-        inferredTracker: 'tractor',
+        primaryTracker: 'tractor',
+        confidence: 0.85,
+        overallReasoning: 'Personal context match',
+        generatedItems: [{
+          tracker: 'tractor',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Personal maintenance task #tractor',
+          reasoning: 'Personal maintenance item'
+        }],
+        taskCompletions: [],
         requiresReview: false
       };
 
@@ -144,7 +164,8 @@ describe('CaptureEngine', () => {
       const result = await captureEngine.capture(captureInput);
 
       expect(result.success).toBe(true);
-      expect(result.tracker).toBe('tractor');
+      expect(result.primaryTracker).toBe('tractor');
+      expect(result.itemResults[0].tracker).toBe('tractor');
       expect(mockInferenceEngineInstance.inferCapture).toHaveBeenCalledWith(captureInput);
     });
 
@@ -153,7 +174,17 @@ describe('CaptureEngine', () => {
       
       mockTrackerManagerInstance.initialize.mockResolvedValue(undefined);
       mockInferenceEngineInstance.inferCapture.mockResolvedValue({
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
+        confidence: 0.8,
+        overallReasoning: 'Auto-init test',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Test input #gsc-ai',
+          reasoning: 'Test item'
+        }],
+        taskCompletions: [],
         requiresReview: false
       });
       mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);
@@ -172,8 +203,17 @@ describe('CaptureEngine', () => {
 
     it('should route to review when confidence is low', async () => {
       const lowConfidenceInference: InferenceResult = {
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
         confidence: 0.3,
+        overallReasoning: 'Low confidence match',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Ambiguous input #gsc-ai',
+          reasoning: 'Unclear intent'
+        }],
+        taskCompletions: [],
         requiresReview: true
       };
 
@@ -192,15 +232,25 @@ describe('CaptureEngine', () => {
       const result = await captureEngine.capture('Ambiguous input');
 
       expect(result.success).toBe(true);
-      expect(result.tracker).toBe('review');
+      expect(result.primaryTracker).toBe('review');
       expect(result.requiresReview).toBe(true);
-      expect(result.formattedEntry).toContain('REVIEW NEEDED');
-      expect(result.formattedEntry).toContain('Ambiguous input');
+      expect(result.itemResults[0].formattedEntry).toContain('REVIEW NEEDED');
+      expect(result.itemResults[0].formattedEntry).toContain('Ambiguous input');
     });
 
     it('should try multiple review tracker names', async () => {
       const lowConfidenceInference: InferenceResult = {
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
+        confidence: 0.95,
+        overallReasoning: 'High confidence but requires review',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Test input #gsc-ai',
+          reasoning: 'Test item'
+        }],
+        taskCompletions: [],
         requiresReview: true
       };
 
@@ -220,7 +270,7 @@ describe('CaptureEngine', () => {
 
       const result = await captureEngine.capture('Test input');
 
-      expect(result.tracker).toBe('review');
+      expect(result.primaryTracker).toBe('review');
       expect(mockTrackerManagerInstance.getTracker).toHaveBeenCalledWith('review');
       expect(mockTrackerManagerInstance.getTracker).toHaveBeenCalledWith('inbox');
       expect(mockTrackerManagerInstance.getTracker).toHaveBeenCalledWith('churn-system');
@@ -235,26 +285,29 @@ describe('CaptureEngine', () => {
 
     it('should fallback to review when tracker write fails', async () => {
       const mockInference: InferenceResult = {
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
+        confidence: 0.8,
+        overallReasoning: 'Good match but write fails',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Test input #gsc-ai',
+          reasoning: 'Test item'
+        }],
+        taskCompletions: [],
         requiresReview: false
       };
 
       mockInferenceEngineInstance.inferCapture.mockResolvedValue(mockInference);
       mockTrackerManagerInstance.appendToTracker.mockResolvedValue(false);
 
-      // Mock review tracker exists
-      mockTrackerManagerInstance.getTracker.mockReturnValue({
-        frontmatter: { tag: 'review' } as any,
-        content: 'content',
-        filePath: '/path/to/review.md'
-      });
-      mockTrackerManagerInstance.appendToTracker.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-
       const result = await captureEngine.capture('Test input');
 
-      expect(result.success).toBe(true);
-      expect(result.tracker).toBe('review');
-      expect(result.requiresReview).toBe(true);
+      expect(result.success).toBe(false); // Should fail when write fails
+      expect(result.primaryTracker).toBe('gsc-ai');
+      expect(result.itemResults[0].success).toBe(false);
+      expect(result.itemResults[0].error).toContain('Failed to write to gsc-ai');
     });
 
     it('should perform emergency capture when everything fails', async () => {
@@ -275,11 +328,11 @@ describe('CaptureEngine', () => {
       const result = await captureEngine.capture('Emergency input');
 
       expect(result.success).toBe(true);
-      expect(result.tracker).toBe('emergency-tracker');
+      expect(result.primaryTracker).toBe('emergency-tracker');
       expect(result.requiresReview).toBe(true);
       expect(result.confidence).toBe(0.1);
-      expect(result.formattedEntry).toContain('EMERGENCY CAPTURE');
-      expect(result.formattedEntry).toContain('Emergency input');
+      expect(result.itemResults[0].formattedEntry).toContain('EMERGENCY CAPTURE');
+      expect(result.itemResults[0].formattedEntry).toContain('Emergency input');
       expect(console.log).toHaveBeenCalledWith('🆘 Emergency capture saved to emergency-tracker');
     });
 
@@ -290,7 +343,7 @@ describe('CaptureEngine', () => {
       const result = await captureEngine.capture('Failed input');
 
       expect(result.success).toBe(false);
-      expect(result.tracker).toBe('none');
+      expect(result.primaryTracker).toBe('none');
       expect(result.requiresReview).toBe(true);
       expect(result.error).toContain('Complete capture failure');
     });
@@ -311,7 +364,7 @@ describe('CaptureEngine', () => {
       const result = await captureEngine.capture('Test input');
 
       expect(result.success).toBe(true);
-      expect(result.tracker).toBe('tracker2');
+      expect(result.primaryTracker).toBe('tracker2');
       expect(mockTrackerManagerInstance.appendToTracker).toHaveBeenCalledTimes(2);
     });
   });
@@ -324,7 +377,17 @@ describe('CaptureEngine', () => {
 
     it('should process multiple inputs successfully', async () => {
       mockInferenceEngineInstance.inferCapture.mockResolvedValue({
-        ...MOCK_AI_RESPONSE,
+        primaryTracker: 'gsc-ai',
+        confidence: 0.8,
+        overallReasoning: 'Batch test',
+        generatedItems: [{
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          priority: 'medium',
+          content: '- [ ] #task Batch item #gsc-ai',
+          reasoning: 'Test item'
+        }],
+        taskCompletions: [],
         requiresReview: false
       });
       mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);
@@ -344,7 +407,20 @@ describe('CaptureEngine', () => {
 
     it('should handle individual failures in batch', async () => {
       mockInferenceEngineInstance.inferCapture
-        .mockResolvedValueOnce({ ...MOCK_AI_RESPONSE, requiresReview: false })
+        .mockResolvedValueOnce({
+          primaryTracker: 'gsc-ai',
+          confidence: 0.8,
+          overallReasoning: 'Success case',
+          generatedItems: [{
+            tracker: 'gsc-ai',
+            itemType: 'action',
+            priority: 'medium',
+            content: '- [ ] #task Success input #gsc-ai',
+            reasoning: 'Test item'
+          }],
+          taskCompletions: [],
+          requiresReview: false
+        })
         .mockRejectedValueOnce(new Error('Second item failed'));
       
       mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);

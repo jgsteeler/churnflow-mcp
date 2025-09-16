@@ -18,12 +18,13 @@ import {
 describe('ChurnFlow Types', () => {
   describe('ItemType', () => {
     it('should include all expected item types', () => {
-      const validTypes: ItemType[] = ['action', 'review', 'reference', 'someday'];
-      expect(validTypes).toHaveLength(4);
+      const validTypes: ItemType[] = ['action', 'review', 'reference', 'someday', 'activity'];
+      expect(validTypes).toHaveLength(5);
       expect(validTypes).toContain('action');
       expect(validTypes).toContain('review');
       expect(validTypes).toContain('reference');
       expect(validTypes).toContain('someday');
+      expect(validTypes).toContain('activity');
     });
 
     it('should be assignable to string', () => {
@@ -138,17 +139,24 @@ describe('ChurnFlow Types', () => {
   describe('InferenceResult', () => {
     it('should create valid inference result', () => {
       const result: InferenceResult = {
-        inferredTracker: 'project-55',
-        itemType: 'action',
-        priority: 'high',
+        primaryTracker: 'project-55',
         confidence: 0.95,
-        reasoning: 'High confidence match based on keywords',
-        formattedEntry: '- [ ] #task Test action item 📅 2024-01-01',
+        overallReasoning: 'High confidence match based on keywords',
+        generatedItems: [{
+          tracker: 'project-55',
+          itemType: 'action',
+          priority: 'high',
+          content: '- [ ] #task Test action item #project-55 ⏫',
+          reasoning: 'Clear actionable task'
+        }],
+        taskCompletions: [],
         requiresReview: false
       };
 
       expect(result.confidence).toBe(0.95);
-      expect(result.itemType).toBe('action');
+      expect(result.primaryTracker).toBe('project-55');
+      expect(result.generatedItems).toHaveLength(1);
+      expect(result.generatedItems[0].itemType).toBe('action');
       expect(result.requiresReview).toBe(false);
     });
   });
@@ -173,24 +181,37 @@ describe('ChurnFlow Types', () => {
     it('should create successful capture result', () => {
       const result: CaptureResult = {
         success: true,
-        tracker: 'gsc-ai',
-        itemType: 'action',
-        formattedEntry: '- [ ] #task Successfully captured',
+        primaryTracker: 'gsc-ai',
         confidence: 0.9,
+        itemResults: [{
+          success: true,
+          tracker: 'gsc-ai',
+          itemType: 'action',
+          formattedEntry: '- [ ] #task Successfully captured #gsc-ai'
+        }],
+        completedTasks: [],
         requiresReview: false
       };
 
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
+      expect(result.primaryTracker).toBe('gsc-ai');
+      expect(result.itemResults).toHaveLength(1);
     });
 
     it('should create failed capture result with error', () => {
       const result: CaptureResult = {
         success: false,
-        tracker: 'none',
-        itemType: 'review',
-        formattedEntry: 'Failed capture attempt',
+        primaryTracker: 'none',
         confidence: 0.1,
+        itemResults: [{
+          success: false,
+          tracker: 'none',
+          itemType: 'review',
+          formattedEntry: 'Failed capture attempt',
+          error: 'Write failed'
+        }],
+        completedTasks: [],
         requiresReview: true,
         error: 'AI service unavailable'
       };
@@ -198,6 +219,7 @@ describe('ChurnFlow Types', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('AI service unavailable');
       expect(result.requiresReview).toBe(true);
+      expect(result.primaryTracker).toBe('none');
     });
   });
 });
