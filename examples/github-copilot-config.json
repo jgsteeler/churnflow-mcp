@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "churnflow": {
+      "command": "tsx",
+      "args": ["/Users/jack/code/churn-mcp/src/index.ts"],
+      "cwd": "/Users/jack/code/churn-mcp",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      }
+    }
+  }
+}
