@@ -12,6 +12,7 @@
 import { CaptureEngine } from './core/CaptureEngine.js';
 import { ReviewManager } from './core/ReviewManager.js';
 import { TrackerManager } from './core/TrackerManager.js';
+import { DashboardManager } from './core/DashboardManager.js';
 import { ChurnConfig, ReviewableItem, ReviewAction, Priority, ItemType } from './types/churn.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -36,6 +37,7 @@ class ChurnCLI {
   private captureEngine?: CaptureEngine;
   private reviewManager?: ReviewManager;
   private trackerManager?: TrackerManager;
+  private dashboardManager?: DashboardManager;
 
   async loadConfig(): Promise<ChurnConfig> {
     // Look for config file first
@@ -82,6 +84,26 @@ class ChurnCLI {
     this.reviewManager = new ReviewManager(config, this.trackerManager);
     
     return this.reviewManager;
+  }
+
+  async initializeDashboardManager(): Promise<DashboardManager> {
+    if (this.dashboardManager) return this.dashboardManager;
+
+    const config = await this.loadConfig();
+    
+    // Initialize dependencies
+    if (!this.trackerManager) {
+      this.trackerManager = new TrackerManager(config);
+      await this.trackerManager.initialize();
+    }
+    
+    if (!this.reviewManager) {
+      this.reviewManager = new ReviewManager(config, this.trackerManager);
+    }
+    
+    this.dashboardManager = new DashboardManager(config, this.trackerManager, this.reviewManager);
+    
+    return this.dashboardManager;
   }
 
   async capture(text: string) {
@@ -455,6 +477,297 @@ class ChurnCLI {
     }
   }
 
+  async next() {
+    try {
+      console.log('🎯 ChurnFlow - What\'s Next Dashboard\n');
+      
+      const dashboardManager = await this.initializeDashboardManager();
+      const [recommendations, summary] = await Promise.all([
+        dashboardManager.getWhatsNext(),
+        dashboardManager.getDashboardSummary()
+      ]);
+      
+      // Display summary
+      console.log(`📊 ${chalk.bold('System Summary')}`);
+      console.log(`📝 Total Action Items: ${chalk.cyan(summary.totalActionItems)}`);
+      if (summary.overdueTasks > 0) {
+        console.log(`🚨 ${chalk.red('Overdue:')} ${summary.overdueTasks}`);
+      }
+      if (summary.dueTodayTasks > 0) {
+        console.log(`🗓️ ${chalk.yellow('Due Today:')} ${summary.dueTodayTasks}`);
+      }
+      if (summary.reviewItemCount > 0) {
+        console.log(`🔍 ${chalk.blue('Pending Review:')} ${summary.reviewItemCount}`);
+      }
+      
+      // Display breakdown
+      console.log(`\n📊 ${chalk.bold('By Context:')}`);
+      for (const [context, count] of Object.entries(summary.trackerBreakdown)) {
+        const emoji = this.getContextEmoji(context);
+        console.log(`  ${emoji} ${context}: ${count}`);
+      }
+      
+      if (recommendations.length === 0) {
+        console.log(`\n${chalk.green('✅ All caught up! No urgent items found.')}`);
+        console.log(`${chalk.gray('Consider using:')} ${chalk.bold('dump')} ${chalk.gray('to capture new thoughts')}`);
+        return;
+      }
+      
+      // Display recommendations
+      console.log(`\n${chalk.bold('🎯 What to Work on Next:')}`);
+      console.log(`${'='.repeat(60)}`);
+      
+      for (let i = 0; i < recommendations.length; i++) {
+        const rec = recommendations[i];
+        const number = chalk.bold(`${i + 1}.`);
+        
+        console.log(`\n${number} ${rec.categoryEmoji} ${chalk.bold(rec.categoryTitle)}`);
+        console.log(`   ${chalk.cyan(rec.item.title)}`);
+        console.log(`   ${chalk.gray('📍')} ${rec.item.trackerFriendlyName} ${chalk.gray('|')} ${chalk.gray('⏱️')} ${rec.estimatedTime}`);
+        console.log(`   ${chalk.gray('💯')} ${rec.reason}`);
+        
+        if (rec.item.dueDate) {
+          const isOverdue = new Date(rec.item.dueDate) < new Date();
+          const dateColor = isOverdue ? chalk.red : chalk.yellow;
+          console.log(`   ${chalk.gray('🗓️')} ${dateColor(rec.item.dueDate)}`);
+        }
+      }
+      
+      console.log(`\n${chalk.gray('Pro tip:')} Run ${chalk.bold('churn review')} to process review items`);
+      console.log(`${chalk.gray('Or:')} ${chalk.bold('dump')} to capture more thoughts`);
+      
+    } catch (error) {
+      console.error('💥 Dashboard failed:', error);
+      process.exit(1);
+    }
+  }
+
+  async tasks(filterTracker?: string, showAll: boolean = false) {
+    try {
+      console.log('📝 ChurnFlow - All Open Tasks\n');
+      
+      const dashboardManager = await this.initializeDashboardManager();
+      const summary = await dashboardManager.getDashboardSummary();
+      
+      // Get all action items
+      const allItems = await (dashboardManager as any).getAllActionableItems();
+      
+      // Filter by tracker if specified
+      const filteredItems = filterTracker ? 
+        allItems.filter((item: any) => item.tracker === filterTracker) : 
+        allItems;
+      
+      // Sort by urgency score (highest first) unless showing all
+      const sortedItems = showAll ? 
+        filteredItems.sort((a: any, b: any) => a.tracker.localeCompare(b.tracker)) :
+        filteredItems.sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
+      
+      console.log(`📊 ${chalk.bold('Summary:')}`);
+      console.log(`📝 Found ${chalk.cyan(sortedItems.length)} open tasks`);
+      if (filterTracker) {
+        console.log(`🎯 Filtered by tracker: ${chalk.bold(filterTracker)}`);
+      }
+      console.log(`📊 Total across all trackers: ${chalk.cyan(allItems.length)}`);
+      
+      if (sortedItems.length === 0) {
+        console.log(`\n${chalk.green('✅ No open tasks found!')}`);
+        return;
+      }
+      
+      console.log(`\n${chalk.bold('📋 All Open Tasks:')}`);
+      console.log(`${'='.repeat(80)}`);
+      
+      let currentTracker = '';
+      for (let i = 0; i < sortedItems.length; i++) {
+        const item = sortedItems[i];
+        
+        // Group by tracker when showing all
+        if (showAll && item.tracker !== currentTracker) {
+          currentTracker = item.tracker;
+          console.log(`\n${chalk.bold.blue(`📋 ${item.trackerFriendlyName} (${item.tracker})`)}`);
+          console.log(`${'-'.repeat(40)}`);
+        }
+        
+        const number = showAll ? '  •' : chalk.bold(`${i + 1}.`);
+        const priorityColor = item.priority === 'high' ? chalk.red : 
+                             item.priority === 'medium' ? chalk.yellow : chalk.gray;
+        const priorityText = priorityColor(item.priority.toUpperCase());
+        
+        console.log(`${number} ${chalk.cyan(item.title)}`);
+        
+        if (!showAll) {
+          console.log(`     ${chalk.gray('📍')} ${item.trackerFriendlyName}`);
+        }
+        
+        const details = [];
+        details.push(`${priorityText}`);
+        details.push(`⏱️ ~${item.estimatedMinutes || 30}min`);
+        details.push(`💯 ${item.urgencyScore}/100`);
+        
+        if (item.dueDate) {
+          const isOverdue = new Date(item.dueDate) < new Date();
+          const dateColor = isOverdue ? chalk.red : chalk.yellow;
+          details.push(`🗓️ ${dateColor(item.dueDate)}`);
+        }
+        
+        console.log(`     ${chalk.gray(details.join(' | '))}`);
+        
+        if (!showAll && i < sortedItems.length - 1) {
+          console.log();
+        }
+      }
+      
+      console.log(`\n${chalk.gray('Pro tip:')} Run ${chalk.bold('next')} to see prioritized recommendations`);
+      console.log(`${chalk.gray('Or:')} ${chalk.bold('tasks all')} to group by tracker`);
+      console.log(`${chalk.gray('Complete tasks:')} ${chalk.bold('done "task title"')}`);
+      
+    } catch (error) {
+      console.error('💥 Tasks list failed:', error);
+      process.exit(1);
+    }
+  }
+
+  async done(taskQuery: string) {
+    try {
+      console.log('✅ ChurnFlow - Mark Task Complete\n');
+      
+      const dashboardManager = await this.initializeDashboardManager();
+      const allItems = await (dashboardManager as any).getAllActionableItems();
+      
+      // Find matching tasks
+      const matches = allItems.filter((item: any) => 
+        item.title.toLowerCase().includes(taskQuery.toLowerCase())
+      );
+      
+      if (matches.length === 0) {
+        console.log(`${chalk.red('❌ No tasks found matching:')} "${taskQuery}"`);
+        console.log(`\n${chalk.gray('Try a shorter search term or check:')} ${chalk.bold('tasks')}`);
+        return;
+      }
+      
+      if (matches.length === 1) {
+        const task = matches[0];
+        const success = await this.markTaskComplete(task);
+        
+        if (success) {
+          console.log(`${chalk.green('✅ Task completed successfully!')}`);
+          console.log(`${chalk.cyan(task.title)}`);
+          console.log(`${chalk.gray('In tracker:')} ${task.trackerFriendlyName}`);
+          console.log(`\n${chalk.gray('Run')} ${chalk.bold('next')} ${chalk.gray('to see updated recommendations')}`);
+        } else {
+          console.log(`${chalk.red('❌ Failed to mark task as complete')}`);
+        }
+        return;
+      }
+      
+      // Multiple matches - let user choose
+      console.log(`${chalk.yellow('🔍 Multiple tasks found matching:')} "${taskQuery}"\n`);
+      
+      const choices = matches.map((task: any, index: number) => ({
+        name: `${task.title} (${task.trackerFriendlyName})`,
+        value: index
+      }));
+      
+      choices.push({ name: 'Cancel', value: -1 });
+      
+      const selection = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'taskIndex',
+          message: 'Which task did you complete?',
+          choices
+        }
+      ]);
+      
+      if (selection.taskIndex === -1) {
+        console.log(`${chalk.gray('Cancelled')}`);
+        return;
+      }
+      
+      const selectedTask = matches[selection.taskIndex];
+      const success = await this.markTaskComplete(selectedTask);
+      
+      if (success) {
+        console.log(`${chalk.green('✅ Task completed successfully!')}`);
+        console.log(`${chalk.cyan(selectedTask.title)}`);
+        console.log(`${chalk.gray('In tracker:')} ${selectedTask.trackerFriendlyName}`);
+        console.log(`\n${chalk.gray('Run')} ${chalk.bold('next')} ${chalk.gray('to see updated recommendations')}`);
+      } else {
+        console.log(`${chalk.red('❌ Failed to mark task as complete')}`);
+      }
+      
+    } catch (error) {
+      console.error('💥 Done command failed:', error);
+      process.exit(1);
+    }
+  }
+
+  private async markTaskComplete(task: any): Promise<boolean> {
+    try {
+      // Initialize tracker manager to get file access
+      if (!this.trackerManager) {
+        const config = await this.loadConfig();
+        this.trackerManager = new TrackerManager(config);
+        await this.trackerManager.initialize();
+      }
+      
+      // Get tracker file path
+      const trackerPath = path.join(
+        (await this.loadConfig()).trackingPath, 
+        `${task.tracker}-tracker.md`
+      );
+      
+      // Read file content
+      const content = await fs.readFile(trackerPath, 'utf-8');
+      const lines = content.split('\n');
+      
+      // Find and replace the task line
+      let found = false;
+      const updatedLines = lines.map(line => {
+        if (found) return line;
+        
+        const trimmed = line.trim();
+        if (trimmed.startsWith('- [ ]') && 
+            trimmed.toLowerCase().includes(task.title.toLowerCase())) {
+          found = true;
+          // Replace [ ] with [x] and add completion date
+          const completedLine = line.replace('- [ ]', '- [x]');
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Add completion date if not already present
+          if (!completedLine.includes('✅')) {
+            return completedLine + ` ✅ ${today}`;
+          }
+          return completedLine;
+        }
+        return line;
+      });
+      
+      if (!found) {
+        console.log(`${chalk.yellow('⚠️  Could not find exact task in file')}`);
+        return false;
+      }
+      
+      // Write updated content back
+      await fs.writeFile(trackerPath, updatedLines.join('\n'));
+      return true;
+      
+    } catch (error) {
+      console.error('Error marking task complete:', error);
+      return false;
+    }
+  }
+
+  private getContextEmoji(context: string): string {
+    switch (context.toLowerCase()) {
+      case 'business': return '💼';
+      case 'project': return '🚀';
+      case 'personal': return '🏠';
+      case 'system': return '⚙️';
+      default: return '📝';
+    }
+  }
+
   async init() {
     console.log('🚀 ChurnFlow Initialization\n');
     
@@ -514,6 +827,26 @@ class ChurnCLI {
         await this.dump();
         break;
         
+      case 'next':
+        await this.next();
+        break;
+        
+      case 'tasks':
+        const showAll = args[1] === 'all';
+        const trackerFilter = showAll ? undefined : args[1];
+        await this.tasks(trackerFilter, showAll);
+        break;
+        
+      case 'done':
+        const taskQuery = args.slice(1).join(' ');
+        if (!taskQuery) {
+          console.error('❌ Please provide a task to mark as complete');
+          console.log('Usage: npm run cli done "task title or partial match"');
+          process.exit(1);
+        }
+        await this.done(taskQuery);
+        break;
+        
       case 'init':
         await this.init();
         break;
@@ -521,12 +854,20 @@ class ChurnCLI {
       default:
         console.log('🧐 ChurnFlow CLI\n');
         console.log('Available commands:');
+        console.log('  next                - Show what to work on next');
+        console.log('  tasks [tracker|all] - List all open tasks');
+        console.log('  done "task"         - Mark a task as complete');
         console.log('  dump                - Interactive brain dump mode');
         console.log('  capture "text"      - Capture and route single text');
         console.log('  status              - Show system status');
         console.log('  review [tracker]    - Review flagged items');
         console.log('  init                - Initialize configuration');
         console.log('\nExamples:');
+        console.log('  npm run cli next');
+        console.log('  npm run cli tasks');
+        console.log('  npm run cli tasks all');
+        console.log('  npm run cli tasks gsc-ai');
+        console.log('  npm run cli done "call client"');
         console.log('  npm run cli dump');
         console.log('  npm run cli capture "Call client about proposal"');
         console.log('  npm run cli status');
