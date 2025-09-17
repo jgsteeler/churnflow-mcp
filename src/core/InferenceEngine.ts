@@ -1,31 +1,31 @@
-import OpenAI from 'openai';
-import { 
-  CaptureInput, 
-  InferenceResult, 
-  ChurnConfig, 
-  ItemType, 
+import OpenAI from "openai";
+import {
+  CaptureInput,
+  InferenceResult,
+  ChurnConfig,
+  ItemType,
   Priority,
-  FORMATTING_CONSTANTS 
-} from '../types/churn.js';
-import { TrackerManager } from './TrackerManager.js';
-import { FormattingUtils } from '../utils/FormattingUtils.js';
+  FORMATTING_CONSTANTS,
+} from "../types/churn.js";
+import { TrackerManager } from "./TrackerManager.js";
+import { FormattingUtils } from "../utils/FormattingUtils.js";
 
 /**
  * AI-powered inference engine for ChurnFlow capture system
- * 
+ *
  * This is where the magic happens - using AI to understand natural language
  * input and route it to the right tracker with the right formatting.
  */
 export class InferenceEngine {
   private openai!: OpenAI;
-  
+
   constructor(
     private config: ChurnConfig,
-    private trackerManager: TrackerManager
+    private trackerManager: TrackerManager,
   ) {
-    if (this.config.aiProvider === 'openai') {
+    if (this.config.aiProvider === "openai") {
       this.openai = new OpenAI({
-        apiKey: this.config.aiApiKey
+        apiKey: this.config.aiApiKey,
       });
     }
     // TODO: Add Anthropic support
@@ -36,32 +36,32 @@ export class InferenceEngine {
    */
   async inferCapture(input: CaptureInput): Promise<InferenceResult> {
     const contextMap = this.trackerManager.getContextMap();
-    
+
     const prompt = this.buildInferencePrompt(input, contextMap);
-    
+
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: "gpt-4o-mini",
         messages: [
           {
-            role: 'system',
-            content: this.getSystemPrompt()
+            role: "system",
+            content: this.getSystemPrompt(),
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        response_format: { type: 'json_object' }
+        response_format: { type: "json_object" },
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+
       return this.parseInferenceResult(result, input);
     } catch (error) {
-      console.error('AI inference failed:', error);
-      
+      console.error("AI inference failed:", error);
+
       // Fallback to basic routing
       return this.fallbackInference(input);
     }
@@ -125,15 +125,18 @@ Always respond with valid JSON in this format:
   /**
    * Build the context-aware prompt for inference
    */
-  private buildInferencePrompt(input: CaptureInput, contextMap: Record<string, any>): string {
+  private buildInferencePrompt(
+    input: CaptureInput,
+    contextMap: Record<string, any>,
+  ): string {
     const timestamp = input.timestamp || new Date();
-    
+
     let prompt = `INPUT TO ROUTE:
 "${input.text}"
 
 Input Type: ${input.inputType}
 Timestamp: ${timestamp.toISOString()}
-${input.forceContext ? `Forced Context: ${input.forceContext}` : ''}
+${input.forceContext ? `Forced Context: ${input.forceContext}` : ""}
 
 AVAILABLE TRACKERS:
 `;
@@ -141,8 +144,8 @@ AVAILABLE TRACKERS:
     for (const [tag, info] of Object.entries(contextMap)) {
       prompt += `
 ${tag}: ${info.friendlyName} (${info.contextType})
-  Keywords: ${info.keywords.slice(0, 5).join(', ')}
-  Recent: ${info.recentActivity.slice(0, 2).join(' | ')}`;
+  Keywords: ${info.keywords.slice(0, 5).join(", ")}
+  Recent: ${info.recentActivity.slice(0, 2).join(" | ")}`;
     }
 
     prompt += `
@@ -163,9 +166,15 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   /**
    * Parse the AI response into our result format (v0.2.2 with FormattingUtils)
    */
-  private parseInferenceResult(aiResult: any, input: CaptureInput): InferenceResult {
-    const normalizedConfidence = Math.max(0, Math.min(1, aiResult.confidence || 0.5));
-    
+  private parseInferenceResult(
+    aiResult: any,
+    input: CaptureInput,
+  ): InferenceResult {
+    const normalizedConfidence = Math.max(
+      0,
+      Math.min(1, aiResult.confidence || 0.5),
+    );
+
     // Parse generated items with v0.2.2 formatting
     const generatedItems: any[] = [];
     if (aiResult.generatedItems && Array.isArray(aiResult.generatedItems)) {
@@ -174,59 +183,70 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
         const priority = this.validatePriority(item.priority);
         const description = item.description || item.content || input.text;
         const tag = item.tag || this.extractTagFromTracker(item.tracker);
-        
+
         // Use FormattingUtils to generate properly formatted content
-        const formattedContent = FormattingUtils.formatEntry(itemType, description, {
-          tag,
-          priority,
-          includePriority: priority !== 'medium', // Only show non-medium priority
-          confidence: normalizedConfidence
-        });
-        
+        const formattedContent = FormattingUtils.formatEntry(
+          itemType,
+          description,
+          {
+            tag,
+            priority,
+            includePriority: priority !== "medium", // Only show non-medium priority
+            confidence: normalizedConfidence,
+          },
+        );
+
         generatedItems.push({
-          tracker: item.tracker || 'review',
+          tracker: item.tracker || "review",
           itemType,
           priority,
           content: formattedContent,
-          reasoning: item.reasoning || 'Generated item'
+          reasoning: item.reasoning || "Generated item",
         });
       }
     }
-    
+
     // If no items generated, create a fallback item
     if (generatedItems.length === 0) {
-      const fallbackContent = FormattingUtils.formatEntry('review', input.text, {
-        confidence: normalizedConfidence
-      });
-      
+      const fallbackContent = FormattingUtils.formatEntry(
+        "review",
+        input.text,
+        {
+          confidence: normalizedConfidence,
+        },
+      );
+
       generatedItems.push({
-        tracker: aiResult.primaryTracker || 'review',
-        itemType: 'review',
-        priority: 'medium',
+        tracker: aiResult.primaryTracker || "review",
+        itemType: "review",
+        priority: "medium",
         content: fallbackContent,
-        reasoning: 'Fallback item creation'
+        reasoning: "Fallback item creation",
       });
     }
-    
+
     // Parse task completions
     const taskCompletions: any[] = [];
     if (aiResult.taskCompletions && Array.isArray(aiResult.taskCompletions)) {
       for (const completion of aiResult.taskCompletions) {
         taskCompletions.push({
-          tracker: completion.tracker || 'review',
-          description: completion.description || 'Task completion detected',
-          reasoning: completion.reasoning || 'Completion inference'
+          tracker: completion.tracker || "review",
+          description: completion.description || "Task completion detected",
+          reasoning: completion.reasoning || "Completion inference",
         });
       }
     }
-    
+
     return {
-      primaryTracker: aiResult.primaryTracker || 'review',
+      primaryTracker: aiResult.primaryTracker || "review",
       confidence: normalizedConfidence,
-      overallReasoning: aiResult.overallReasoning || 'AI inference result',
+      overallReasoning: aiResult.overallReasoning || "AI inference result",
       generatedItems,
       taskCompletions,
-      requiresReview: (aiResult.requiresReview !== undefined ? aiResult.requiresReview : false) || normalizedConfidence < this.config.confidenceThreshold
+      requiresReview:
+        (aiResult.requiresReview !== undefined
+          ? aiResult.requiresReview
+          : false) || normalizedConfidence < this.config.confidenceThreshold,
     };
   }
 
@@ -234,23 +254,25 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    * Fallback inference when AI fails (v0.2.2 with FormattingUtils)
    */
   private fallbackInference(input: CaptureInput): InferenceResult {
-    const fallbackContent = FormattingUtils.formatEntry('review', input.text, {
-      confidence: 0.1
-    });
-    
-    return {
-      primaryTracker: 'review',
+    const fallbackContent = FormattingUtils.formatEntry("review", input.text, {
       confidence: 0.1,
-      overallReasoning: 'AI inference failed, routing to review',
-      generatedItems: [{
-        tracker: 'review',
-        itemType: 'review',
-        priority: 'medium',
-        content: fallbackContent,
-        reasoning: 'Fallback due to AI failure'
-      }],
+    });
+
+    return {
+      primaryTracker: "review",
+      confidence: 0.1,
+      overallReasoning: "AI inference failed, routing to review",
+      generatedItems: [
+        {
+          tracker: "review",
+          itemType: "review",
+          priority: "medium",
+          content: fallbackContent,
+          reasoning: "Fallback due to AI failure",
+        },
+      ],
       taskCompletions: [],
-      requiresReview: true
+      requiresReview: true,
     };
   }
 
@@ -261,9 +283,9 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     // Most tracker names are the same as their tags
     // Remove common suffixes and normalize
     return trackerName
-      .replace('-tracker', '')
-      .replace('_tracker', '')
-      .replace(/\s+/g, '-')
+      .replace("-tracker", "")
+      .replace("_tracker", "")
+      .replace(/\s+/g, "-")
       .toLowerCase();
   }
 
@@ -271,22 +293,28 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    * Validate and normalize item type
    */
   private validateItemType(itemType: any): ItemType {
-    const validTypes: ItemType[] = ['action', 'review', 'reference', 'someday', 'activity'];
+    const validTypes: ItemType[] = [
+      "action",
+      "review",
+      "reference",
+      "someday",
+      "activity",
+    ];
     if (validTypes.includes(itemType)) {
       return itemType;
     }
-    return 'review'; // Safe default
+    return "review"; // Safe default
   }
 
   /**
    * Validate and normalize priority
    */
   private validatePriority(priority: any): Priority {
-    const validPriorities: Priority[] = ['critical', 'high', 'medium', 'low'];
+    const validPriorities: Priority[] = ["critical", "high", "medium", "low"];
     if (validPriorities.includes(priority)) {
       return priority;
     }
-    return 'medium'; // Safe default
+    return "medium"; // Safe default
   }
 
   /**
@@ -302,7 +330,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     input: CaptureInput,
     trackerMatch: boolean,
     keywordMatches: number,
-    contextClarity: number
+    contextClarity: number,
   ): number {
     let confidence = 0.5; // Base confidence
 
@@ -339,7 +367,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     }
 
     // Action items get extra scrutiny
-    if (itemType === 'action' && confidence < 0.8) {
+    if (itemType === "action" && confidence < 0.8) {
       return true;
     }
 
@@ -351,11 +379,24 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
    */
   extractKeywords(text: string): string[] {
     // Simple keyword extraction - can be enhanced with NLP
-    const words = text.toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+    const words = text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
-      .filter(word => word.length > 3)
-      .filter(word => !['this', 'that', 'with', 'from', 'they', 'have', 'been', 'will'].includes(word));
+      .filter((word) => word.length > 3)
+      .filter(
+        (word) =>
+          ![
+            "this",
+            "that",
+            "with",
+            "from",
+            "they",
+            "have",
+            "been",
+            "will",
+          ].includes(word),
+      );
 
     // Return top 5 most relevant words
     return words.slice(0, 5);
@@ -367,7 +408,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
   generateReviewMetadata(
     input: CaptureInput,
     inferredType: ItemType,
-    inferredPriority: Priority
+    inferredPriority: Priority,
   ): {
     keywords: string[];
     urgency: Priority;
@@ -378,7 +419,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
       keywords: this.extractKeywords(input.text),
       urgency: inferredPriority,
       type: inferredType,
-      editableFields: ['tracker', 'priority', 'tags', 'type']
+      editableFields: ["tracker", "priority", "tags", "type"],
     };
   }
 }

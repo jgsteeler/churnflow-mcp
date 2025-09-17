@@ -1,6 +1,6 @@
 {
   "collectionsPath": "/tmp/churn-test/Collections",
-  "trackingPath": "/tmp/churn-test/Tracking",
+  "trackingPath": "/tmp/churn-test/Tracking", 
   "crossrefPath": "/tmp/churn-test/Tracking/crossref.json",
   "aiProvider": "openai",
   "aiApiKey": "test-key",

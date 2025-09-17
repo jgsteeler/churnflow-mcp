@@ -2,9 +2,14 @@
  * Core types for ChurnFlow ADHD-friendly productivity system
  */
 
-export type ItemType = 'action' | 'review' | 'reference' | 'someday' | 'activity';
-export type ContextType = 'business' | 'personal' | 'project' | 'system';
-export type Priority = 'critical' | 'high' | 'medium' | 'low';
+export type ItemType =
+  | "action"
+  | "review"
+  | "reference"
+  | "someday"
+  | "activity";
+export type ContextType = "business" | "personal" | "project" | "system";
+export type Priority = "critical" | "high" | "medium" | "low";
 
 /**
  * Tracker frontmatter structure from existing Churn system
@@ -53,7 +58,7 @@ export interface Tracker {
  */
 export interface CaptureInput {
   text: string;
-  inputType: 'voice' | 'text';
+  inputType: "voice" | "text";
   forceContext?: string;
   timestamp?: Date;
 }
@@ -97,7 +102,7 @@ export interface ChurnConfig {
   collectionsPath: string;
   trackingPath: string;
   crossrefPath: string;
-  aiProvider: 'openai' | 'anthropic';
+  aiProvider: "openai" | "anthropic";
   aiApiKey: string;
   confidenceThreshold: number;
   review?: ReviewConfig;
@@ -109,57 +114,58 @@ export interface ChurnConfig {
  */
 export const FORMATTING_CONSTANTS = {
   // Date and time formats
-  DATE_FORMAT: 'YYYY-MM-DD', // ISO date format
-  TIMESTAMP_FORMAT: 'YYYY-MM-DD HH:mm', // 24-hour timestamp
-  COMPLETION_FORMAT: '✅ YYYY-MM-DD', // Task completion format
-  DUE_DATE_FORMAT: '📅 YYYY-MM-DD', // Due date format
-  
+  DATE_FORMAT: "YYYY-MM-DD", // ISO date format
+  TIMESTAMP_FORMAT: "YYYY-MM-DD HH:mm", // 24-hour timestamp
+  COMPLETION_FORMAT: "✅ YYYY-MM-DD", // Task completion format
+  DUE_DATE_FORMAT: "📅 YYYY-MM-DD", // Due date format
+
   // Entry prefixes by type
   ENTRY_PREFIXES: {
-    action: '- [ ] #task',
-    completed: '- [x] #task',
-    activity: '-',
-    reference: '- **Ref**:',
-    someday: '- [ ] #someday',
-    review: '- [ ] #review'
+    action: "- [ ] #task",
+    completed: "- [x] #task",
+    activity: "-",
+    reference: "- **Ref**:",
+    someday: "- [ ] #someday",
+    review: "- [ ] #review",
   },
-  
+
   // Standard section headers
   SECTION_HEADERS: {
-    activity: '## Activity Log',
-    actions: '## Action Items',
-    references: '## References', 
-    review: '## Review Queue',
-    someday: '## Someday/Maybe',
-    notes: '## Notes & Context'
+    activity: "## Activity Log",
+    actions: "## Action Items",
+    references: "## References",
+    review: "## Review Queue",
+    someday: "## Someday/Maybe",
+    notes: "## Notes & Context",
   },
-  
+
   // Priority indicators
   PRIORITY_INDICATORS: {
-    critical: '🚨',
-    high: '⏫',
-    medium: '🔼', 
-    low: '🔻'
+    critical: "🚨",
+    high: "⏫",
+    medium: "🔼",
+    low: "🔻",
   },
-  
+
   // Standard metadata patterns (ChurnFlow managed only)
   METADATA_PATTERNS: {
-    tags: '#[\\w-]+', // Hashtag format
-    context: '@[\\w-]+' // Context tags (@next, @review, etc)
+    tags: "#[\\w-]+", // Hashtag format
+    context: "@[\\w-]+", // Context tags (@next, @review, etc)
   },
-  
+
   // Tracker header template
-  TRACKER_HEADER_TEMPLATE: '# {friendlyName} — Tracker{iteration}',
-  
+  TRACKER_HEADER_TEMPLATE: "# {friendlyName} — Tracker{iteration}",
+
   // Standard entry templates (without Obsidian IDs/dependencies)
   ENTRY_TEMPLATES: {
-    action: '- [ ] #task {description} #{tag} {priority} {dueDate}',
-    completed: '- [x] #task {description} #{tag} {priority} ✅ {completionDate}',
-    activity: '- [{timestamp}] {description}',
-    reference: '- **{title}**: {description} [{date}]',
-    someday: '- [ ] #someday [{captureDate}] {description} #{tag}',
-    review: '- [ ] #review [{date}] {description} (confidence: {confidence}%)'
-  }
+    action: "- [ ] #task {description} #{tag} {priority} {dueDate}",
+    completed:
+      "- [x] #task {description} #{tag} {priority} ✅ {completionDate}",
+    activity: "- [{timestamp}] {description}",
+    reference: "- **{title}**: {description} [{date}]",
+    someday: "- [ ] #someday [{captureDate}] {description} #{tag}",
+    review: "- [ ] #review [{date}] {description} (confidence: {confidence}%)",
+  },
 } as const;
 
 /**
@@ -170,7 +176,7 @@ export const VALIDATION_PATTERNS = {
   timestamp: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
   hashtag: /^#[\w-]+$/,
   contextTag: /^@[\w-]+$/,
-  priorityIcon: /^[🚨⏫🔼🔻]$/
+  priorityIcon: /^[🚨⏫🔼🔻]$/,
 } as const;
 
 /**
@@ -214,17 +220,23 @@ export interface CaptureResult {
 /**
  * Possible actions that can be performed on a reviewable item
  */
-export type ReviewAction = 'accept' | 'edit-priority' | 'edit-tags' | 'edit-type' | 'move' | 'reject';
+export type ReviewAction =
+  | "accept"
+  | "edit-priority"
+  | "edit-tags"
+  | "edit-type"
+  | "move"
+  | "reject";
 
 /**
  * Review status for tracking item lifecycle
  */
-export type ReviewStatus = 'pending' | 'flagged' | 'confirmed';
+export type ReviewStatus = "pending" | "flagged" | "confirmed";
 
 /**
  * Source of a reviewable item
  */
-export type ReviewSource = 'capture' | 'inference';
+export type ReviewSource = "capture" | "inference";
 
 /**
  * Interface representing an item that can be flagged for review
