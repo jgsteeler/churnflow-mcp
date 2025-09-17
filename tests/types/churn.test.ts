@@ -12,7 +12,12 @@ import {
   CaptureInput,
   InferenceResult,
   ChurnConfig,
-  CaptureResult
+  CaptureResult,
+  ReviewAction,
+  ReviewStatus,
+  ReviewSource,
+  ReviewableItem,
+  ReviewConfig
 } from '../../src/types/churn.js';
 
 describe('ChurnFlow Types', () => {
@@ -220,6 +225,105 @@ describe('ChurnFlow Types', () => {
       expect(result.error).toBe('AI service unavailable');
       expect(result.requiresReview).toBe(true);
       expect(result.primaryTracker).toBe('none');
+    });
+  });
+
+  // v0.3.1 Review System Type Tests
+  describe('Review Types', () => {
+    describe('ReviewAction', () => {
+      it('should include all expected review actions', () => {
+        const actions: ReviewAction[] = ['accept', 'edit-priority', 'edit-tags', 'edit-type', 'move', 'reject'];
+        
+        // Test that all actions are valid
+        actions.forEach(action => {
+          expect(typeof action).toBe('string');
+        });
+      });
+    });
+
+    describe('ReviewStatus', () => {
+      it('should include all expected review statuses', () => {
+        const statuses: ReviewStatus[] = ['pending', 'flagged', 'confirmed'];
+        
+        statuses.forEach(status => {
+          expect(typeof status).toBe('string');
+        });
+      });
+    });
+
+    describe('ReviewSource', () => {
+      it('should include all expected review sources', () => {
+        const sources: ReviewSource[] = ['capture', 'inference'];
+        
+        sources.forEach(source => {
+          expect(typeof source).toBe('string');
+        });
+      });
+    });
+
+    describe('ReviewableItem', () => {
+      it('should create valid reviewable item', () => {
+        const reviewItem: ReviewableItem = {
+          id: 'review_123',
+          content: 'Test reviewable item',
+          confidence: 0.75,
+          currentSection: 'actions',
+          currentTracker: 'test-tracker',
+          timestamp: new Date(),
+          source: 'capture',
+          reviewStatus: 'flagged',
+          metadata: {
+            keywords: ['test', 'review'],
+            urgency: 'medium',
+            type: 'action',
+            editableFields: ['tracker', 'priority']
+          }
+        };
+
+        expect(reviewItem.id).toBe('review_123');
+        expect(reviewItem.confidence).toBe(0.75);
+        expect(reviewItem.reviewStatus).toBe('flagged');
+        expect(reviewItem.metadata.type).toBe('action');
+      });
+    });
+
+    describe('ReviewConfig', () => {
+      it('should create valid review configuration', () => {
+        const config: ReviewConfig = {
+          autoReviewThreshold: 0.8,
+          requireReviewThreshold: 0.5,
+          defaultBatchSize: 10,
+          colorOutput: true,
+          showConfidenceScores: true
+        };
+
+        expect(config.autoReviewThreshold).toBe(0.8);
+        expect(config.defaultBatchSize).toBe(10);
+        expect(config.colorOutput).toBe(true);
+      });
+    });
+
+    describe('ChurnConfig with Review', () => {
+      it('should support optional review configuration', () => {
+        const config: ChurnConfig = {
+          collectionsPath: '/path/to/collections',
+          trackingPath: '/path/to/tracking',
+          crossrefPath: '/path/to/crossref.json',
+          aiProvider: 'openai',
+          aiApiKey: 'test-api-key',
+          confidenceThreshold: 0.7,
+          review: {
+            autoReviewThreshold: 0.8,
+            requireReviewThreshold: 0.5,
+            defaultBatchSize: 10,
+            colorOutput: true,
+            showConfidenceScores: true
+          }
+        };
+
+        expect(config.review?.autoReviewThreshold).toBe(0.8);
+        expect(config.review?.defaultBatchSize).toBe(10);
+      });
     });
   });
 });
