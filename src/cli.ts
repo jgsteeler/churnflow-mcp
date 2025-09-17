@@ -10,10 +10,14 @@
  */
 
 import { CaptureEngine } from './core/CaptureEngine.js';
-import { ChurnConfig } from './types/churn.js';
+import { ReviewManager } from './core/ReviewManager.js';
+import { TrackerManager } from './core/TrackerManager.js';
+import { ChurnConfig, ReviewableItem, ReviewAction, Priority, ItemType } from './types/churn.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +34,8 @@ const DEFAULT_CONFIG: ChurnConfig = {
 
 class ChurnCLI {
   private captureEngine?: CaptureEngine;
+  private reviewManager?: ReviewManager;
+  private trackerManager?: TrackerManager;
 
   async loadConfig(): Promise<ChurnConfig> {
     // Look for config file first
@@ -60,6 +66,22 @@ class ChurnCLI {
     await this.captureEngine.initialize();
     
     return this.captureEngine;
+  }
+
+  async initializeReviewManager(): Promise<ReviewManager> {
+    if (this.reviewManager) return this.reviewManager;
+
+    const config = await this.loadConfig();
+    
+    // Initialize TrackerManager first
+    if (!this.trackerManager) {
+      this.trackerManager = new TrackerManager(config);
+      await this.trackerManager.initialize();
+    }
+    
+    this.reviewManager = new ReviewManager(config, this.trackerManager);
+    
+    return this.reviewManager;
   }
 
   async capture(text: string) {
@@ -122,7 +144,7 @@ class ChurnCLI {
       const engine = await this.initializeCaptureEngine();
       const status = engine.getStatus();
       
-      console.log(`🟢 Initialized: ${status.initialized}`);
+      console.log(`�︢ Initialized: ${status.initialized}`);
       console.log(`📚 Total Trackers: ${status.totalTrackers}`);
       console.log(`⚙️  AI Provider: ${status.config.aiProvider}`);
       console.log(`🎯 Confidence Threshold: ${status.config.confidenceThreshold}`);
@@ -133,9 +155,234 @@ class ChurnCLI {
         console.log(`  ${context}: ${count}`);
       }
       
+      // Add review status
+      try {
+        const reviewManager = await this.initializeReviewManager();
+        const reviewStatus = reviewManager.getReviewStatus();
+        
+        console.log('\n🔍 Review Status:');
+        if (reviewStatus.total > 0) {
+          console.log(`  ${chalk.yellow('⚠️  Pending Review:')} ${reviewStatus.pending}`);
+          console.log(`  ${chalk.blue('🏷️  Flagged Items:')} ${reviewStatus.flagged}`);
+          console.log(`  ${chalk.green('✅ Confirmed:')} ${reviewStatus.confirmed}`);
+          console.log(`  ${chalk.cyan('📊 Total:')} ${reviewStatus.total}`);
+          
+          if (reviewStatus.pending > 0 || reviewStatus.flagged > 0) {
+            console.log(`\n${chalk.yellow('➡️  Run')} ${chalk.bold('npm run cli review')} ${chalk.yellow('to process items')}`);
+          }
+        } else {
+          console.log(`  ${chalk.green('✅ No items need review')}`);
+        }
+      } catch (reviewError) {
+        console.log(`  ${chalk.red('❌ Review system unavailable:')} ${reviewError}`);
+      }
+      
     } catch (error) {
       console.error('💥 Status check failed:', error);
       process.exit(1);
+    }
+  }
+
+  async review(targetTracker?: string) {
+    try {
+      console.log('🔍 ChurnFlow Review Interface\n');
+      
+      const reviewManager = await this.initializeReviewManager();
+      const items = reviewManager.getItemsNeedingReview(targetTracker);
+      
+      if (items.length === 0) {
+        if (targetTracker) {
+          console.log(`${chalk.green('✅ No items need review in tracker:')} ${chalk.bold(targetTracker)}`);
+        } else {
+          console.log(`${chalk.green('✅ No items need review across all trackers')}`);
+        }
+        return;
+      }
+      
+      console.log(`${chalk.cyan('📊 Found')} ${chalk.bold(items.length)} ${chalk.cyan('items needing review')}`);
+      if (targetTracker) {
+        console.log(`${chalk.blue('🎯 Filtering by tracker:')} ${chalk.bold(targetTracker)}`);
+      }
+      
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const isLast = i === items.length - 1;
+        
+        console.log(`\n${chalk.yellow('=')}${'='.repeat(60)}${chalk.yellow('=')}`);
+        console.log(`${chalk.cyan('📝 Item')} ${chalk.bold(`${i + 1}/${items.length}`)}`);
+        console.log(`${chalk.blue('📁 Tracker:')} ${item.currentTracker}`);
+        console.log(`${chalk.blue('📜 Section:')} ${item.currentSection}`);
+        console.log(`${chalk.blue('🎯 Confidence:')} ${Math.round(item.confidence * 100)}%`);
+        console.log(`${chalk.blue('🔗 Type:')} ${item.metadata.type}`);
+        console.log(`${chalk.blue('⚙️ Priority:')} ${item.metadata.urgency}`);
+        console.log(`${chalk.blue('🏷️ Keywords:')} ${item.metadata.keywords.join(', ')}`);
+        console.log(`${chalk.blue('🕰️ Status:')} ${item.reviewStatus}`);
+        console.log(`\n${chalk.bold('📝 Content:')}`);
+        console.log(`${chalk.gray(item.content)}`);
+        
+        const action = await this.promptReviewAction(item);
+        const success = await this.executeReviewAction(reviewManager, item.id, action);
+        
+        if (success) {
+          console.log(`${chalk.green('✅ Action completed successfully')}`);
+        } else {
+          console.log(`${chalk.red('❌ Action failed')}`);
+        }
+        
+        if (!isLast) {
+          const continueReview = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'continue',
+              message: 'Continue to next item?',
+              default: true
+            }
+          ]);
+          
+          if (!continueReview.continue) {
+            console.log(`${chalk.yellow('🙄 Review session ended')}`);
+            break;
+          }
+        }
+      }
+      
+      console.log(`\n${chalk.green('✅ Review session completed')}`);
+      
+    } catch (error) {
+      console.error('💥 Review failed:', error);
+      process.exit(1);
+    }
+  }
+
+  async promptReviewAction(item: ReviewableItem): Promise<{action: ReviewAction; newValues?: any}> {
+    const choices = [
+      {
+        name: `${chalk.green('✅ Accept')} - Move to tracker as-is`,
+        value: 'accept'
+      },
+      {
+        name: `${chalk.blue('🎯 Edit Priority')} - Change urgency level`,
+        value: 'edit-priority'
+      },
+      {
+        name: `${chalk.cyan('🏷️ Edit Tags')} - Modify keywords`,
+        value: 'edit-tags'
+      },
+      {
+        name: `${chalk.magenta('🔄 Edit Type')} - Change item type`,
+        value: 'edit-type'
+      },
+      {
+        name: `${chalk.yellow('📦 Move')} - Change tracker`,
+        value: 'move'
+      },
+      {
+        name: `${chalk.red('❌ Reject')} - Remove from system`,
+        value: 'reject'
+      }
+    ];
+    
+    const actionChoice = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do with this item?',
+        choices
+      }
+    ]);
+    
+    const action = actionChoice.action as ReviewAction;
+    let newValues = {};
+    
+    switch (action) {
+      case 'edit-priority':
+        const priorityChoice = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'priority',
+            message: 'Select new priority:',
+            choices: [
+              { name: `${chalk.red('🚨 High')} - Urgent/important`, value: 'high' },
+              { name: `${chalk.yellow('🔼 Medium')} - Normal priority`, value: 'medium' },
+              { name: `${chalk.gray('🔻 Low')} - Low priority`, value: 'low' }
+            ],
+            default: item.metadata.urgency
+          }
+        ]);
+        newValues = { priority: priorityChoice.priority as Priority };
+        break;
+        
+      case 'edit-tags':
+        const tagsInput = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'tags',
+            message: 'Enter keywords (comma-separated):',
+            default: item.metadata.keywords.join(', ')
+          }
+        ]);
+        newValues = { tags: tagsInput.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag) };
+        break;
+        
+      case 'edit-type':
+        const typeChoice = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'type',
+            message: 'Select new type:',
+            choices: [
+              { name: 'Action Item - Task to complete', value: 'action' },
+              { name: 'Reference - Information to keep', value: 'reference' },
+              { name: 'Review Item - Needs more review', value: 'review' },
+              { name: 'Someday/Maybe - Future consideration', value: 'someday' }
+            ],
+            default: item.metadata.type
+          }
+        ]);
+        newValues = { type: typeChoice.type as ItemType };
+        break;
+        
+      case 'move':
+        // Get available trackers
+        if (!this.trackerManager) {
+          await this.initializeReviewManager(); // This initializes trackerManager too
+        }
+        const trackers = this.trackerManager!.getTrackersByContext();
+        const trackerChoices = trackers.map((tracker: any) => ({
+          name: `${tracker.frontmatter.friendlyName} (${tracker.frontmatter.contextType})`,
+          value: tracker.frontmatter.tag
+        }));
+        
+        const trackerChoice = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'tracker',
+            message: 'Select target tracker:',
+            choices: trackerChoices,
+            default: item.currentTracker
+          }
+        ]);
+        newValues = { tracker: trackerChoice.tracker };
+        break;
+    }
+    
+    return { action, newValues };
+  }
+
+  async executeReviewAction(
+    reviewManager: ReviewManager, 
+    itemId: string, 
+    actionData: {action: ReviewAction; newValues?: any}
+  ): Promise<boolean> {
+    try {
+      return await reviewManager.processReviewAction(
+        itemId, 
+        actionData.action, 
+        actionData.newValues
+      );
+    } catch (error) {
+      console.error(`${chalk.red('Error executing action:')} ${error}`);
+      return false;
     }
   }
 
@@ -189,19 +436,27 @@ class ChurnCLI {
         await this.status();
         break;
         
+      case 'review':
+        const targetTracker = args[1];
+        await this.review(targetTracker);
+        break;
+        
       case 'init':
         await this.init();
         break;
         
       default:
-        console.log('🧠 ChurnFlow CLI\n');
+        console.log('🧐 ChurnFlow CLI\n');
         console.log('Available commands:');
-        console.log('  capture "text"  - Capture and route text');
-        console.log('  status          - Show system status');
-        console.log('  init            - Initialize configuration');
+        console.log('  capture "text"      - Capture and route text');
+        console.log('  status              - Show system status');
+        console.log('  review [tracker]    - Review flagged items');
+        console.log('  init                - Initialize configuration');
         console.log('\nExamples:');
         console.log('  npm run cli capture "Call client about proposal"');
         console.log('  npm run cli status');
+        console.log('  npm run cli review');
+        console.log('  npm run cli review work-tracker');
         break;
     }
   }
