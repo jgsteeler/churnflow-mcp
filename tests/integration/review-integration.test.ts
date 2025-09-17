@@ -263,7 +263,7 @@ active: true
       const shouldFlag2 = captureEngine['inferenceEngine'].shouldFlagForReview(0.8, 'action');
       
       expect(shouldFlag1).toBe(true);  // Below threshold
-      expect(shouldFlag2).toBe(false); // Above threshold (but action items have stricter criteria)
+      expect(shouldFlag2).toBe(true);  // At threshold: action items require confidence > 0.8 to bypass review
     });
   });
 });
