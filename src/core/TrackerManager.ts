@@ -94,6 +94,13 @@ export class TrackerManager {
   }
 
   /**
+   * Get crossref entries for external access
+   */
+  getCrossrefEntries(): CrossrefEntry[] {
+    return this.crossref;
+  }
+
+  /**
    * Get all available context information for AI inference
    */
   getContextMap(): Record<string, any> {
