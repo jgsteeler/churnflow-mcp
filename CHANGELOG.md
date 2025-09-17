@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-09-17
+
+### 🧠 Major Feature: Interactive Brain Dump Mode
+**Eliminates ADHD cognitive overhead between thought and capture**
+
+### ✨ Added
+- **Interactive Brain Dump Command** - `dump` command for frictionless multi-thought capture
+  - Real-time processing and routing feedback for each thought
+  - Zero-friction workflow: type thoughts, press enter, repeat until done
+  - Automatic exit on empty input or "quit" command
+  - Live capture statistics and confidence reporting
+  - Emergency backup ensures no thoughts are lost
+- **Global Shell Alias** - `dump` command available system-wide via zsh alias
+- **Enhanced CLI Help** - Updated command documentation and examples
+
+### 🎯 ADHD-Optimized Design
+- **Eliminates Decision Fatigue** - No need to think about quotes, syntax, or commands
+- **Immediate Feedback** - See where each thought gets routed in real-time
+- **Session Summary** - Complete statistics on what was captured and organized
+- **Cognitive Load Reduction** - Focus purely on brain dumping, system handles the rest
+- **Interruption Recovery** - Can resume thought capture without losing context
+
+### 🚀 Enhanced
+- **CLI Interface** - Extended with brain dump mode integration
+- **User Experience** - Streamlined workflow from thought to organized action item
+- **Command Structure** - Consistent with existing CLI patterns while adding new functionality
+
+### 🏆 Key Achievement
+**Frictionless Thought Capture** - ChurnFlow now provides the ultimate ADHD-friendly capture experience, removing all barriers between having a thought and getting it safely organized into the productivity system.
+
 ## [0.3.1] - 2025-09-17
 
 ### 🎯 Major Feature: Core Review Process System
