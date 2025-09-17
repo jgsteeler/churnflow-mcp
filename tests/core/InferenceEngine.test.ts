@@ -582,4 +582,208 @@ describe('InferenceEngine', () => {
       expect(result.requiresReview).toBe(true);
     });
   });
+
+  // v0.3.1 Review System Tests
+  describe('Review system integration', () => {
+    beforeEach(() => {
+      mockTrackerManagerInstance.getContextMap.mockReturnValue({
+        'test': 'business tracker'
+      });
+    });
+
+    describe('calculateInferenceConfidence', () => {
+      it('should calculate confidence based on multiple factors', () => {
+        const input: CaptureInput = {
+          text: 'Complete the project report',
+          inputType: 'text'
+        };
+
+        // High confidence scenario: tracker match + keywords + clear context
+        const highConfidence = inferenceEngine.calculateInferenceConfidence(
+          input,
+          true,   // tracker match
+          3,      // keyword matches
+          0.8     // context clarity
+        );
+
+        expect(highConfidence).toBeGreaterThan(0.8);
+
+        // Low confidence scenario: no matches
+        const lowConfidence = inferenceEngine.calculateInferenceConfidence(
+          input,
+          false,  // no tracker match
+          0,      // no keyword matches
+          0.2     // low context clarity
+        );
+
+        expect(lowConfidence).toBeLessThan(0.6);
+      });
+
+      it('should handle very short text with lower confidence', () => {
+        const shortInput: CaptureInput = {
+          text: 'Do it',
+          inputType: 'text'
+        };
+
+        const confidence = inferenceEngine.calculateInferenceConfidence(
+          shortInput,
+          true,
+          2,
+          0.8
+        );
+
+        // Should be reduced due to short text
+        expect(confidence).toBeLessThan(1.0);
+      });
+
+      it('should handle very long text with slightly lower confidence', () => {
+        const longInput: CaptureInput = {
+          text: 'This is a very long input that contains a lot of text and might be harder to process accurately because it has so many words and concepts that could make the AI inference less confident about the routing decision',
+          inputType: 'text'
+        };
+
+        const confidence = inferenceEngine.calculateInferenceConfidence(
+          longInput,
+          true,
+          3,
+          0.8
+        );
+
+        // Should be slightly reduced due to length
+        const normalConfidence = inferenceEngine.calculateInferenceConfidence(
+          { text: 'Normal length task', inputType: 'text' },
+          true,
+          3,
+          0.8
+        );
+
+        expect(confidence).toBeLessThanOrEqual(normalConfidence);
+      });
+
+      it('should clamp confidence to valid range', () => {
+        const input: CaptureInput = {
+          text: 'Test input',
+          inputType: 'text'
+        };
+
+        // Test maximum confidence
+        const maxConfidence = inferenceEngine.calculateInferenceConfidence(
+          input,
+          true,
+          10,  // many keywords
+          1.0  // perfect clarity
+        );
+        expect(maxConfidence).toBeLessThanOrEqual(1.0);
+
+        // Test minimum confidence
+        const minConfidence = inferenceEngine.calculateInferenceConfidence(
+          { text: 'x', inputType: 'text' },  // very short
+          false,
+          0,
+          0
+        );
+        expect(minConfidence).toBeGreaterThanOrEqual(0.0);
+      });
+    });
+
+    describe('shouldFlagForReview', () => {
+      it('should flag items below confidence threshold', () => {
+        expect(inferenceEngine.shouldFlagForReview(0.6, 'review')).toBe(true);
+        expect(inferenceEngine.shouldFlagForReview(0.8, 'review')).toBe(false);
+      });
+
+      it('should apply stricter criteria for action items', () => {
+        expect(inferenceEngine.shouldFlagForReview(0.75, 'action')).toBe(true);
+        expect(inferenceEngine.shouldFlagForReview(0.85, 'action')).toBe(false);
+      });
+
+      it('should use normal criteria for non-action items', () => {
+        expect(inferenceEngine.shouldFlagForReview(0.75, 'reference')).toBe(false);
+        expect(inferenceEngine.shouldFlagForReview(0.75, 'someday')).toBe(false);
+      });
+    });
+
+    describe('extractKeywords', () => {
+      it('should extract meaningful keywords from text', () => {
+        const text = 'Complete the quarterly financial report with updated metrics';
+        const keywords = inferenceEngine.extractKeywords(text);
+
+        expect(keywords).toContain('complete');
+        expect(keywords).toContain('quarterly');
+        expect(keywords).toContain('financial');
+        expect(keywords).toContain('report');
+        expect(keywords).toContain('updated');
+        expect(keywords).not.toContain('the');
+        expect(keywords).not.toContain('with');
+      });
+
+      it('should filter out common stop words', () => {
+        const text = 'This is something that they have been working on with great dedication';
+        const keywords = inferenceEngine.extractKeywords(text);
+
+        expect(keywords).not.toContain('this');
+        expect(keywords).not.toContain('that');
+        expect(keywords).not.toContain('they');
+        expect(keywords).not.toContain('have');
+        expect(keywords).not.toContain('been');
+        expect(keywords).not.toContain('with');
+      });
+
+      it('should limit to 5 keywords', () => {
+        const text = 'Complete design implementation testing deployment monitoring optimization performance analysis debugging troubleshooting documentation';
+        const keywords = inferenceEngine.extractKeywords(text);
+
+        expect(keywords).toHaveLength(5);
+      });
+
+      it('should handle short text gracefully', () => {
+        const text = 'Quick task';
+        const keywords = inferenceEngine.extractKeywords(text);
+
+        expect(keywords).toHaveLength(2);
+        expect(keywords).toContain('quick');
+        expect(keywords).toContain('task');
+      });
+    });
+
+    describe('generateReviewMetadata', () => {
+      it('should generate complete metadata for review items', () => {
+        const input: CaptureInput = {
+          text: 'Complete the project documentation review',
+          inputType: 'text'
+        };
+
+        const metadata = inferenceEngine.generateReviewMetadata(
+          input,
+          'action',
+          'high'
+        );
+
+        expect(metadata).toEqual({
+          keywords: expect.arrayContaining(['complete', 'project', 'documentation', 'review']),
+          urgency: 'high',
+          type: 'action',
+          editableFields: ['tracker', 'priority', 'tags', 'type']
+        });
+      });
+
+      it('should extract keywords from input text', () => {
+        const input: CaptureInput = {
+          text: 'Schedule meeting with stakeholders about budget allocation',
+          inputType: 'text'
+        };
+
+        const metadata = inferenceEngine.generateReviewMetadata(
+          input,
+          'action',
+          'medium'
+        );
+
+        // Should contain most keywords, but 'about' might be included as it's 5 chars
+        expect(metadata.keywords).toEqual(
+          expect.arrayContaining(['schedule', 'meeting', 'stakeholders', 'budget'])
+        );
+      });
+    });
+  });
 });
