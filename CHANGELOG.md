@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-09-17
+
+### 🎯 MAJOR FEATURE: Complete Task Management Suite
+**Transforms ChurnFlow into a comprehensive task lifecycle management system with the new `change` command**
+
+### ✨ Added
+- **`change` Command** - Intuitive alias for task editing (shorter than `edit`)
+  - `npm run cli change "task"` - Search and edit specific tasks
+  - `npm run cli change` - Interactive task picker from top 20 urgent tasks
+  - Shell alias: `change "task"` - Available system-wide
+  - Same functionality as `edit` but with better UX and cleaner command name
+- **Complete Task Editing** - 7 comprehensive edit options for any task
+  - ✏️ Edit title while preserving formatting and tags
+  - ⚖️ Change priority (High ⏫, Medium 🔼, Low 🔽, or remove)
+  - 📅 Update due date (custom, today, tomorrow, next week, or remove)
+  - 🏷️ Edit tags with smart hashtag management
+  - 🚚 Move to different tracker with intelligent tag updates
+  - ✅ Close (mark as completed) with automatic completion dates
+  - 🗑️ Delete permanently with double confirmation safety
+- **Interactive Task Management** - Enhanced picker and selection system
+  - Priority indicators (🔴🟡🟢) for visual clarity
+  - Context icons (💼 Business, 🚀 Project, 🏠 Personal, ⚙️ System)
+  - Smart task picker shows most urgent items first (prevents overwhelm)
+  - Multiple task disambiguation with clear tracker context
+
+### 🚚 Enhanced - Move Between Trackers
+- **Smart Tracker Selection** - Context-aware tracker picker with friendly names
+- **Intelligent Tag Updates** - Automatically updates #tags to match new tracker
+- **Atomic Operations** - Safe remove-from-source, add-to-target with rollback
+- **Move Confirmation** - Clear summary showing from/to trackers and updated line
+- **Error Recovery** - Automatic rollback if target tracker append fails
+
+### ✅ Enhanced - Close Tasks  
+- **Same as `done` Command** - Alternative path to mark tasks complete
+- **Completion Tracking** - Adds `✅ YYYY-MM-DD` completion dates
+- **Task Removal** - Completed tasks disappear from active task lists
+- **File Updates** - Direct tracker file updates (- [ ] → - [x])
+
+### 🗑️ Enhanced - Delete Tasks Safely
+- **Double Confirmation** - Two separate confirmations with clear warnings
+- **Safety Messaging** - Red text warnings about permanent deletion
+- **Default Protection** - Both confirmations default to "No" for safety
+- **Complete Removal** - Tasks entirely removed from tracker files
+- **Clear Feedback** - Confirmation of successful deletion
+
+### 🔧 Technical Improvements
+- **Enhanced TrackerManager** - Added `getCrossrefEntries()` method for external access
+- **Proper File Path Resolution** - Uses crossref data to find correct tracker files
+- **Fixed Front Matter Issues** - Added missing front matter to 7 tracker files
+- **Robust Error Handling** - Comprehensive try-catch with user-friendly messages
+- **Shell Integration** - Added `change` alias alongside existing `finish` alias
+
+### 💡 ADHD-Optimized UX
+- **Task Picker Limits** - Shows top 20 tasks by urgency (prevents overwhelm)
+- **Visual Priority Indicators** - Color-coded priority for instant recognition
+- **Clear Before/After** - Shows old vs new task lines for all edits
+- **Safety Confirmations** - Destructive actions require explicit confirmation
+- **Consistent Patterns** - Same interaction flows across all edit options
+- **Momentum Building** - Quick edit access from any CLI screen
+
+### 📈 Impact Metrics
+- **7 Edit Operations** - Complete task lifecycle management in single interface
+- **630+ Lines Added** - Comprehensive feature implementation
+- **All Trackers Fixed** - Front matter issues resolved for undefined tasks
+- **Shell Aliases** - `change` and `finish` commands available system-wide
+- **Zero Breaking Changes** - All existing functionality preserved and enhanced
+
+### 🏆 Key Achievement
+**Complete Task Management System** - ChurnFlow now provides comprehensive task lifecycle management from a single `change` command interface. Users can edit, move, complete, and delete tasks with ADHD-friendly workflows, eliminating the need to manually open and edit tracker files. This completes the productivity loop with zero-friction task management that adapts to changing priorities and contexts.
+
 ## [0.3.2] - 2025-09-17
 
 ### 🎯 MAJOR BREAKTHROUGH: Complete ADHD Dashboard & Task Management System
