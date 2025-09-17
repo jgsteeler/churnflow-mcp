@@ -43,9 +43,33 @@ The core Review Process system was a **significant new feature** that should hav
 
 ---
 
-### **v0.3.3** - Inferred Due Dates
+### **v0.3.3** - Review System Integration
+**Type**: MINOR (integration fix, critical for review workflow)  
+**Scope**: Connect CaptureEngine to actually use ReviewManager for flagging items
+
+**Current Issue**: 
+- ✅ ReviewManager (v0.3.1) - Core infrastructure complete
+- ✅ CLI Review Interface (v0.3.2) - User interface ready
+- ❌ **Missing Link**: CaptureEngine writes review items directly to trackers instead of using ReviewManager
+
+**Planned Features**:
+- 🔗 Integrate CaptureEngine with ReviewManager for low-confidence items
+- 🔗 Replace direct tracker writing with ReviewManager.flagItemForReview()
+- 🔗 Update confidence scoring to use ReviewManager thresholds
+- 🔗 Ensure review items appear in CLI review interface
+- 🔗 Test end-to-end workflow: capture → review → action
+
+**Implementation Considerations**:
+- Modify CaptureEngine to detect review-worthy items
+- Route low-confidence captures through ReviewManager
+- Maintain backward compatibility for high-confidence items
+- Update confidence threshold configuration
+
+---
+
+### **v0.3.4** - Inferred Due Dates
 **Type**: MINOR (new feature, backward compatible)  
-**Scope**: AI inference of due dates from capture text  
+**Scope**: AI inference of due dates from capture text
 
 **Planned Features**:
 - 📅 AI detection of time references ("by Friday", "next week", "in 3 days")
@@ -62,7 +86,7 @@ The core Review Process system was a **significant new feature** that should hav
 
 ---
 
-### **v0.3.4** - CrossRef Validation & Initialization
+### **v0.3.5** - CrossRef Validation & Initialization
 **Type**: MINOR (new feature, backward compatible)  
 **Scope**: Smart crossref validation and archive handling  
 
@@ -81,7 +105,7 @@ The core Review Process system was a **significant new feature** that should hav
 
 ---
 
-### **v0.3.5** - Enhanced MCP Server Features
+### **v0.3.6** - Enhanced MCP Server Features
 **Type**: MINOR (new MCP tools, backward compatible)  
 **Scope**: Extended MCP server capabilities  
 
@@ -100,7 +124,7 @@ The core Review Process system was a **significant new feature** that should hav
 
 ---
 
-### **v0.3.6** - Comprehensive Testing & 80% Coverage
+### **v0.3.7** - Comprehensive Testing & 80% Coverage
 **Type**: PATCH (quality improvements, no new features)  
 **Scope**: Testing infrastructure and quality assurance  
 
@@ -127,13 +151,14 @@ The core Review Process system was a **significant new feature** that should hav
 2. **Complete v0.3.2** - Finish CLI review interface
 3. **Update roadmap documentation** - Align all plans with new versioning
 
-### Next 6 Weeks (1 version per week):
-- **Week 1**: Complete v0.3.2 (CLI Review)
-- **Week 2**: Implement v0.3.3 (Due Dates) 
-- **Week 3**: Implement v0.3.4 (CrossRef Validation)
-- **Week 4**: Implement v0.3.5 (Enhanced MCP)
-- **Week 5**: Implement v0.3.6 (Testing & Coverage)
-- **Week 6**: Polish and v0.4.0 planning
+### Next 7 Weeks (1 version per week):
+- **Week 1**: Complete v0.3.2 (CLI Review) ✅
+- **Week 2**: Implement v0.3.3 (Review Integration) 
+- **Week 3**: Implement v0.3.4 (Due Dates) 
+- **Week 4**: Implement v0.3.5 (CrossRef Validation)
+- **Week 5**: Implement v0.3.6 (Enhanced MCP)
+- **Week 6**: Implement v0.3.7 (Testing & Coverage)
+- **Week 7**: Polish and v0.4.0 planning
 
 ---
 
@@ -142,26 +167,29 @@ The core Review Process system was a **significant new feature** that should hav
 ### User Experience Impact:
 - **v0.3.1**: Core infrastructure (no user-visible changes)
 - **v0.3.2**: New CLI commands (significant UX improvement)
-- **v0.3.3**: Smarter capture (major UX enhancement)
-- **v0.3.4**: System reliability (operational improvement)
-- **v0.3.5**: AI assistant features (expanded capabilities)
-- **v0.3.6**: Quality & reliability (stability improvement)
+- **v0.3.3**: **CRITICAL** - Makes review system actually work (end-to-end functionality)
+- **v0.3.4**: Smarter capture with due dates (major UX enhancement)
+- **v0.3.5**: System reliability (operational improvement)
+- **v0.3.6**: AI assistant features (expanded capabilities)
+- **v0.3.7**: Quality & reliability (stability improvement)
 
 ### Development Complexity:
 - **v0.3.1**: ✅ Complete (retrospective versioning only)
-- **v0.3.2**: 🔄 90% complete (final CLI polish)
-- **v0.3.3**: 🟡 Medium complexity (NLP date parsing)
-- **v0.3.4**: 🟢 Low complexity (file system operations)
-- **v0.3.5**: 🟡 Medium complexity (MCP integration)
-- **v0.3.6**: 🔴 High complexity (comprehensive testing)
+- **v0.3.2**: ✅ Complete (CLI interface ready)
+- **v0.3.3**: 🟢 Low complexity (integration work, critical path)
+- **v0.3.4**: 🟡 Medium complexity (NLP date parsing)
+- **v0.3.5**: 🟢 Low complexity (file system operations)
+- **v0.3.6**: 🟡 Medium complexity (MCP integration)
+- **v0.3.7**: 🔴 High complexity (comprehensive testing)
 
 ### Business Value:
 - **v0.3.1**: Foundation for all review features
-- **v0.3.2**: Direct user productivity improvement
-- **v0.3.3**: Major ADHD-friendly enhancement (automatic date handling)
-- **v0.3.4**: Professional deployment readiness
-- **v0.3.5**: Full AI assistant ecosystem support
-- **v0.3.6**: Production-grade reliability
+- **v0.3.2**: Direct user productivity improvement (CLI ready)
+- **v0.3.3**: **CRITICAL** - Makes the review system actually functional end-to-end
+- **v0.3.4**: Major ADHD-friendly enhancement (automatic date handling)
+- **v0.3.5**: Professional deployment readiness
+- **v0.3.6**: Full AI assistant ecosystem support
+- **v0.3.7**: Production-grade reliability
 
 ---
 
