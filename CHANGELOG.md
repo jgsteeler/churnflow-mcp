@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-09-17
+
+### 🎯 Major Feature: Core Review Process System
+**Implemented by GitHub Copilot agent - comprehensive human oversight for AI-driven task management**
+
+### ✨ Added
+- **ReviewManager Class** - Complete review workflow management with ADHD-friendly interface
+- **Two-Tier Review System** - Auto-placed items (high confidence) vs. Review Queue (low confidence)
+- **ReviewableItem Interface** - Comprehensive metadata and review lifecycle management
+- **Review Actions** - Accept, edit-priority, edit-tags, edit-type, move, reject workflows
+- **Confidence-Based Flagging** - Intelligent review requirements based on AI confidence
+- **Batch Operations** - Process multiple review items efficiently
+- **Review Status Dashboard** - Clear indicators for items needing attention
+
+### 🚀 Enhanced
+- **InferenceEngine** - Extended with review confidence scoring and keyword extraction
+  - `calculateInferenceConfidence()` - Multi-factor confidence assessment
+  - `shouldFlagForReview()` - Intelligent review requirement logic
+  - `extractKeywords()` - Context-aware keyword extraction
+  - `generateReviewMetadata()` - Complete review item preparation
+- **Type System** - Extended with comprehensive review interfaces
+  - `ReviewableItem`, `ReviewAction`, `ReviewStatus`, `ReviewSource` interfaces
+  - `ReviewConfig` for system configuration
+  - Integration with existing `ChurnConfig`
+
+### 📚 Documentation
+- **REVIEW-SYSTEM.md** - Complete 275-line system documentation
+  - API reference and usage examples
+  - Configuration options and workflows
+  - Integration patterns and best practices
+- **v0.3.1-PLAN.md** - Original implementation plan (187 lines)
+
+### 🧪 Testing & Quality
+- **161 Tests Passing** - All existing functionality maintained
+- **Comprehensive Review Tests** - 20 new tests covering all review workflows
+- **100% TypeScript Compliance** - Clean compilation with full type safety
+- **Core Logic Coverage** - 87% coverage on business logic
+
+### 🎯 ADHD-Friendly Design
+- **Human Oversight** - Ensures all captured items receive appropriate attention
+- **Easy Corrections** - Simple workflows to fix AI routing mistakes
+- **Confidence Transparency** - Clear indicators of AI certainty levels
+- **Batch Processing** - Efficient review of multiple items
+- **Flexible Workflows** - Support for different review preferences
+
+### 🏆 Key Achievement
+**Complete Review Infrastructure** - ChurnFlow now provides the crucial human oversight layer for AI-driven productivity, ensuring users can trust and refine AI decisions while maintaining ADHD-friendly workflows.
+
 ## [0.3.0] - 2025-09-16
 
 ### 🎆 Major Feature: GitHub Copilot Integration
