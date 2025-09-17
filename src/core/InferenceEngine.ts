@@ -288,4 +288,97 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     }
     return 'medium'; // Safe default
   }
+
+  /**
+   * v0.3.1 Review System Integration - Placeholder methods
+   * These methods provide the foundation for review functionality
+   */
+
+  /**
+   * Calculate confidence score for an inference result
+   * Enhanced scoring considers multiple factors for ADHD-friendly review
+   */
+  calculateInferenceConfidence(
+    input: CaptureInput,
+    trackerMatch: boolean,
+    keywordMatches: number,
+    contextClarity: number
+  ): number {
+    let confidence = 0.5; // Base confidence
+
+    // Boost confidence for clear tracker matches
+    if (trackerMatch) {
+      confidence += 0.3;
+    }
+
+    // Boost for keyword matches (max 0.2)
+    confidence += Math.min(keywordMatches * 0.05, 0.2);
+
+    // Boost for context clarity (0-0.3)
+    confidence += contextClarity * 0.3;
+
+    // Text length factor (very short or very long text is less confident)
+    const textLength = input.text.length;
+    if (textLength < 10) {
+      confidence -= 0.2;
+    } else if (textLength > 200) {
+      confidence -= 0.1;
+    }
+
+    // Clamp to valid range
+    return Math.max(0, Math.min(1, confidence));
+  }
+
+  /**
+   * Determine if an item should be flagged for review based on confidence
+   */
+  shouldFlagForReview(confidence: number, itemType: ItemType): boolean {
+    // Use confidence threshold from config
+    if (confidence < this.config.confidenceThreshold) {
+      return true;
+    }
+
+    // Action items get extra scrutiny
+    if (itemType === 'action' && confidence < 0.8) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Extract keywords from input text for review metadata
+   */
+  extractKeywords(text: string): string[] {
+    // Simple keyword extraction - can be enhanced with NLP
+    const words = text.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3)
+      .filter(word => !['this', 'that', 'with', 'from', 'they', 'have', 'been', 'will'].includes(word));
+
+    // Return top 5 most relevant words
+    return words.slice(0, 5);
+  }
+
+  /**
+   * Generate review metadata for an item
+   */
+  generateReviewMetadata(
+    input: CaptureInput,
+    inferredType: ItemType,
+    inferredPriority: Priority
+  ): {
+    keywords: string[];
+    urgency: Priority;
+    type: ItemType;
+    editableFields: string[];
+  } {
+    return {
+      keywords: this.extractKeywords(input.text),
+      urgency: inferredPriority,
+      type: inferredType,
+      editableFields: ['tracker', 'priority', 'tags', 'type']
+    };
+  }
 }

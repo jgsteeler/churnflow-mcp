@@ -100,6 +100,7 @@ export interface ChurnConfig {
   aiProvider: 'openai' | 'anthropic';
   aiApiKey: string;
   confidenceThreshold: number;
+  review?: ReviewConfig;
 }
 
 /**
@@ -204,4 +205,55 @@ export interface CaptureResult {
   completedTasks: TaskCompletion[];
   requiresReview: boolean;
   error?: string;
+}
+
+/**
+ * Review system types for v0.3.1
+ */
+
+/**
+ * Possible actions that can be performed on a reviewable item
+ */
+export type ReviewAction = 'accept' | 'edit-priority' | 'edit-tags' | 'edit-type' | 'move' | 'reject';
+
+/**
+ * Review status for tracking item lifecycle
+ */
+export type ReviewStatus = 'pending' | 'flagged' | 'confirmed';
+
+/**
+ * Source of a reviewable item
+ */
+export type ReviewSource = 'capture' | 'inference';
+
+/**
+ * Interface representing an item that can be flagged for review
+ * Provides confidence scores, review status, and metadata for ADHD-friendly management
+ */
+export interface ReviewableItem {
+  id: string;
+  content: string;
+  confidence: number;
+  currentSection: string;
+  currentTracker: string;
+  timestamp: Date;
+  source: ReviewSource;
+  reviewStatus: ReviewStatus;
+  metadata: {
+    keywords: string[];
+    urgency: Priority;
+    type: ItemType;
+    editableFields: string[]; // which fields can be easily changed
+  };
+}
+
+/**
+ * Configuration options for the review system
+ */
+export interface ReviewConfig {
+  autoReviewThreshold: number;
+  requireReviewThreshold: number;
+  defaultBatchSize: number;
+  colorOutput: boolean;
+  showConfidenceScores: boolean;
 }
