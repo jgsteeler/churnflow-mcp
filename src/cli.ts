@@ -535,6 +535,7 @@ class ChurnCLI {
       
       console.log(`\n${chalk.gray('Pro tip:')} Run ${chalk.bold('churn review')} to process review items`);
       console.log(`${chalk.gray('Or:')} ${chalk.bold('dump')} to capture more thoughts`);
+      console.log(`${chalk.gray('Edit tasks:')} ${chalk.bold('change "task title"')} ${chalk.gray('or')} ${chalk.bold('change')} ${chalk.gray('for picker')}`);
       
     } catch (error) {
       console.error('💥 Dashboard failed:', error);
@@ -559,7 +560,11 @@ class ChurnCLI {
       
       // Sort by urgency score (highest first) unless showing all
       const sortedItems = showAll ? 
-        filteredItems.sort((a: any, b: any) => a.tracker.localeCompare(b.tracker)) :
+        filteredItems.sort((a: any, b: any) => {
+          const trackerA = a.tracker || '';
+          const trackerB = b.tracker || '';
+          return trackerA.localeCompare(trackerB);
+        }) :
         filteredItems.sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
       
       console.log(`📊 ${chalk.bold('Summary:')}`);
@@ -620,6 +625,7 @@ class ChurnCLI {
       console.log(`\n${chalk.gray('Pro tip:')} Run ${chalk.bold('next')} to see prioritized recommendations`);
       console.log(`${chalk.gray('Or:')} ${chalk.bold('tasks all')} to group by tracker`);
       console.log(`${chalk.gray('Complete tasks:')} ${chalk.bold('done "task title"')}`);
+      console.log(`${chalk.gray('Edit tasks:')} ${chalk.bold('change "task title"')} ${chalk.gray('or')} ${chalk.bold('change')} ${chalk.gray('for picker')}`);
       
     } catch (error) {
       console.error('💥 Tasks list failed:', error);
@@ -699,6 +705,612 @@ class ChurnCLI {
     } catch (error) {
       console.error('💥 Done command failed:', error);
       process.exit(1);
+    }
+  }
+
+  async edit(taskQuery?: string) {
+    try {
+      console.log('✏️ ChurnFlow - Edit Task\n');
+      
+      const dashboardManager = await this.initializeDashboardManager();
+      const allItems = await (dashboardManager as any).getAllActionableItems();
+      
+      let selectedTask: any;
+      
+      if (taskQuery) {
+        // Find matching tasks
+        const matches = allItems.filter((item: any) => 
+          item.title.toLowerCase().includes(taskQuery.toLowerCase())
+        );
+        
+        if (matches.length === 0) {
+          console.log(`${chalk.red('❌ No tasks found matching:')} "${taskQuery}"`);
+          console.log(`\n${chalk.gray('Try a shorter search term or check:')} ${chalk.bold('tasks')}`);
+          return;
+        }
+        
+        if (matches.length === 1) {
+          selectedTask = matches[0];
+        } else {
+          // Multiple matches - let user choose
+          console.log(`${chalk.yellow('🔍 Multiple tasks found matching:')} "${taskQuery}"\n`);
+          
+          const choices = matches.map((task: any, index: number) => ({
+            name: `${task.title} (${task.trackerFriendlyName})`,
+            value: index
+          }));
+          
+          choices.push({ name: 'Cancel', value: -1 });
+          
+          const selection = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'taskIndex',
+              message: 'Which task would you like to edit?',
+              choices
+            }
+          ]);
+          
+          if (selection.taskIndex === -1) {
+            console.log(`${chalk.gray('Cancelled')}`);
+            return;
+          }
+          
+          selectedTask = matches[selection.taskIndex];
+        }
+      } else {
+        // No query provided - show task picker
+        if (allItems.length === 0) {
+          console.log(`${chalk.green('✅ No open tasks found!')}`);
+          return;
+        }
+        
+        // Sort by urgency for better selection experience
+        const sortedItems = allItems.sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
+        
+        // Show top 20 tasks to avoid overwhelming the user
+        const displayItems = sortedItems.slice(0, 20);
+        
+        const choices = displayItems.map((task: any, index: number) => {
+          const priorityEmoji = task.priority === 'high' ? '🔴' : 
+                               task.priority === 'medium' ? '🟡' : '🟢';
+          return {
+            name: `${priorityEmoji} ${task.title} (${task.trackerFriendlyName})`,
+            value: index
+          };
+        });
+        
+        choices.push({ name: 'Cancel', value: -1 });
+        
+        const selection = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'taskIndex',
+            message: 'Which task would you like to edit?',
+            choices,
+            pageSize: 15
+          }
+        ]);
+        
+        if (selection.taskIndex === -1) {
+          console.log(`${chalk.gray('Cancelled')}`);
+          return;
+        }
+        
+        selectedTask = displayItems[selection.taskIndex];
+      }
+      
+      // Show current task details
+      console.log(`\n${chalk.bold('Current Task:')}`);
+      console.log(`📋 ${chalk.cyan(selectedTask.title)}`);
+      console.log(`📍 ${selectedTask.trackerFriendlyName}`);
+      console.log(`⚖️ Priority: ${selectedTask.priority}`);
+      if (selectedTask.dueDate) {
+        console.log(`📅 Due: ${selectedTask.dueDate}`);
+      }
+      
+      // Get edit action
+      const editAction = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'action',
+          message: 'What would you like to edit?',
+          choices: [
+            { name: '✏️ Edit title', value: 'title' },
+            { name: '⚖️ Change priority', value: 'priority' },
+            { name: '📅 Update due date', value: 'dueDate' },
+            { name: '🏷️ Edit tags', value: 'tags' },
+            { name: '🚚 Move to different tracker', value: 'move' },
+            { name: '✅ Close (mark as completed)', value: 'close' },
+            { name: '🗑️ Delete task permanently', value: 'delete' },
+            { name: '📝 View full line (for manual editing)', value: 'viewFull' },
+            { name: '❌ Cancel', value: 'cancel' }
+          ]
+        }
+      ]);
+      
+      if (editAction.action === 'cancel') {
+        console.log(`${chalk.gray('Cancelled')}`);
+        return;
+      }
+      
+      const success = await this.performTaskEdit(selectedTask, editAction.action);
+      
+      if (success) {
+        console.log(`${chalk.green('✅ Task updated successfully!')}`);
+        console.log(`\n${chalk.gray('Run')} ${chalk.bold('next')} ${chalk.gray('or')} ${chalk.bold('tasks')} ${chalk.gray('to see the updated task')}`);
+      } else {
+        console.log(`${chalk.red('❌ Failed to update task')}`);
+      }
+      
+    } catch (error) {
+      console.error('💥 Edit command failed:', error);
+      process.exit(1);
+    }
+  }
+  
+  private async performTaskEdit(task: any, editType: string): Promise<boolean> {
+    try {
+      // Initialize tracker manager to get file access
+      if (!this.trackerManager) {
+        const config = await this.loadConfig();
+        this.trackerManager = new TrackerManager(config);
+        await this.trackerManager.initialize();
+      }
+      
+      // Get the correct tracker file path from crossref
+      const crossrefEntries = this.trackerManager.getCrossrefEntries();
+      const entry = crossrefEntries.find(e => e.tag === task.tracker);
+      
+      if (!entry) {
+        console.log(`${chalk.yellow('⚠️ Could not find tracker entry for:')} ${task.tracker}`);
+        return false;
+      }
+      
+      const trackerPath = entry.trackerFile;
+      
+      const content = await fs.readFile(trackerPath, 'utf-8');
+      const lines = content.split('\n');
+      
+      // Find the task line
+      let taskLineIndex = -1;
+      let currentTaskLine = '';
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (trimmed.startsWith('- [ ]') && 
+            trimmed.toLowerCase().includes(task.title.toLowerCase())) {
+          taskLineIndex = i;
+          currentTaskLine = line;
+          break;
+        }
+      }
+      
+      if (taskLineIndex === -1) {
+        console.log(`${chalk.yellow('⚠️ Could not find task in file')}`);
+        return false;
+      }
+      
+      let newTaskLine = currentTaskLine;
+      
+      switch (editType) {
+        case 'title':
+          newTaskLine = await this.editTaskTitle(currentTaskLine, task.title);
+          break;
+        case 'priority':
+          newTaskLine = await this.editTaskPriority(currentTaskLine);
+          break;
+        case 'dueDate':
+          newTaskLine = await this.editTaskDueDate(currentTaskLine);
+          break;
+        case 'tags':
+          newTaskLine = await this.editTaskTags(currentTaskLine);
+          break;
+        case 'move':
+          return await this.moveTaskToTracker(task, currentTaskLine, taskLineIndex, lines, trackerPath);
+        case 'close':
+          return await this.closeTask(task, currentTaskLine, taskLineIndex, lines, trackerPath);
+        case 'delete':
+          return await this.deleteTask(task, currentTaskLine, taskLineIndex, lines, trackerPath);
+        case 'viewFull':
+          console.log(`\n${chalk.bold('Full task line:')}`);
+          console.log(`${chalk.gray(currentTaskLine)}`);
+          console.log(`\n${chalk.yellow('💡 To manually edit:')}`);
+          console.log(`1. Open: ${chalk.cyan(trackerPath)}`);
+          console.log(`2. Find line: ${task.title}`);
+          console.log(`3. Make your changes and save`);
+          return true;
+        default:
+          return false;
+      }
+      
+      if (newTaskLine === currentTaskLine) {
+        console.log(`${chalk.gray('No changes made')}`);
+        return true;
+      }
+      
+      // Update the file
+      lines[taskLineIndex] = newTaskLine;
+      await fs.writeFile(trackerPath, lines.join('\n'));
+      
+      console.log(`\n${chalk.green('✅ Updated task line:')}`);
+      console.log(`${chalk.gray('Old:')} ${currentTaskLine.trim()}`);
+      console.log(`${chalk.green('New:')} ${newTaskLine.trim()}`);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Error editing task:', error);
+      return false;
+    }
+  }
+  
+  private async editTaskTitle(currentLine: string, currentTitle: string): Promise<string> {
+    const response = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'newTitle',
+        message: 'Enter new title:',
+        default: currentTitle
+      }
+    ]);
+    
+    if (response.newTitle.trim() === currentTitle) {
+      return currentLine;
+    }
+    
+    // Replace the title portion while preserving tags and formatting
+    return currentLine.replace(currentTitle, response.newTitle.trim());
+  }
+  
+  private async editTaskPriority(currentLine: string): Promise<string> {
+    const priorityResponse = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'priority',
+        message: 'Select priority:',
+        choices: [
+          { name: '🔴 High (⏫)', value: '⏫' },
+          { name: '🟡 Medium (🔼)', value: '🔼' },
+          { name: '🟢 Low (🔽)', value: '🔽' },
+          { name: '❌ Remove priority', value: 'remove' }
+        ]
+      }
+    ]);
+    
+    let newLine = currentLine;
+    
+    // Remove existing priority indicators
+    newLine = newLine.replace(/[⏫🔼🔽]/g, '').replace(/\s+/g, ' ');
+    
+    if (priorityResponse.priority !== 'remove') {
+      // Add new priority before any existing tags
+      const tagIndex = newLine.search(/#\w+|📅|@\w+/);
+      if (tagIndex !== -1) {
+        newLine = newLine.slice(0, tagIndex) + priorityResponse.priority + ' ' + newLine.slice(tagIndex);
+      } else {
+        newLine = newLine + ' ' + priorityResponse.priority;
+      }
+    }
+    
+    return newLine;
+  }
+  
+  private async editTaskDueDate(currentLine: string): Promise<string> {
+    const dateResponse = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'dateOption',
+        message: 'Due date option:',
+        choices: [
+          { name: '📅 Set custom date', value: 'custom' },
+          { name: '📅 Today', value: 'today' },
+          { name: '📅 Tomorrow', value: 'tomorrow' },
+          { name: '📅 Next week', value: 'nextweek' },
+          { name: '❌ Remove due date', value: 'remove' }
+        ]
+      }
+    ]);
+    
+    let newDate = '';
+    
+    switch (dateResponse.dateOption) {
+      case 'custom':
+        const customResponse = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'customDate',
+            message: 'Enter date (YYYY-MM-DD):',
+            validate: (input) => {
+              const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+              return dateRegex.test(input) || 'Please use YYYY-MM-DD format';
+            }
+          }
+        ]);
+        newDate = customResponse.customDate;
+        break;
+      case 'today':
+        newDate = new Date().toISOString().split('T')[0];
+        break;
+      case 'tomorrow':
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        newDate = tomorrow.toISOString().split('T')[0];
+        break;
+      case 'nextweek':
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        newDate = nextWeek.toISOString().split('T')[0];
+        break;
+      case 'remove':
+        return currentLine.replace(/📅 \d{4}-\d{2}-\d{2}/g, '').replace(/\s+/g, ' ');
+    }
+    
+    let newLine = currentLine;
+    
+    // Remove existing due date
+    newLine = newLine.replace(/📅 \d{4}-\d{2}-\d{2}/g, '');
+    
+    // Add new due date at the end
+    if (newDate) {
+      newLine = newLine.trim() + ` 📅 ${newDate}`;
+    }
+    
+    return newLine;
+  }
+  
+  private async editTaskTags(currentLine: string): Promise<string> {
+    // Extract current tags
+    const currentTags = currentLine.match(/#\w+/g) || [];
+    const currentTagsStr = currentTags.join(' ');
+    
+    console.log(`\n${chalk.bold('Current tags:')} ${currentTagsStr || 'none'}`);
+    
+    const tagResponse = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'tags',
+        message: 'Enter tags (space-separated, use # prefix):',
+        default: currentTagsStr
+      }
+    ]);
+    
+    let newLine = currentLine;
+    
+    // Remove all current tags
+    newLine = newLine.replace(/#\w+/g, '').replace(/\s+/g, ' ');
+    
+    // Add new tags
+    if (tagResponse.tags.trim()) {
+      const tags = tagResponse.tags.trim();
+      newLine = newLine.trim() + ' ' + tags;
+    }
+    
+    return newLine;
+  }
+  
+  private async moveTaskToTracker(task: any, currentTaskLine: string, taskLineIndex: number, sourceLines: string[], sourceTrackerPath: string): Promise<boolean> {
+    try {
+      console.log(`\n${chalk.bold('Moving task to different tracker...')}`);
+      
+      // Get available trackers
+      const crossrefEntries = this.trackerManager!.getCrossrefEntries();
+      const availableTrackers = crossrefEntries
+        .filter(entry => entry.active && entry.tag !== task.tracker)
+        .sort((a, b) => a.tag.localeCompare(b.tag));
+      
+      if (availableTrackers.length === 0) {
+        console.log(`${chalk.yellow('⚠️ No other trackers available')}`);
+        return false;
+      }
+      
+      // Create choices with context information
+      const choices = availableTrackers.map(entry => {
+        const contextEmoji = this.getContextEmoji(entry.contextType || 'system');
+        const tracker = this.trackerManager!.getTracker(entry.tag);
+        const friendlyName = tracker?.frontmatter?.friendlyName || entry.tag;
+        
+        return {
+          name: `${contextEmoji} ${friendlyName} (${entry.tag})`,
+          value: entry.tag,
+          short: friendlyName
+        };
+      });
+      
+      choices.push({ name: 'Cancel', value: 'cancel', short: 'Cancel' });
+      
+      const response = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'targetTracker',
+          message: 'Move task to which tracker?',
+          choices,
+          pageSize: 15
+        }
+      ]);
+      
+      if (response.targetTracker === 'cancel') {
+        console.log(`${chalk.gray('Cancelled move')}`);
+        return false;
+      }
+      
+      // Get target tracker info
+      const targetEntry = crossrefEntries.find(e => e.tag === response.targetTracker);
+      if (!targetEntry) {
+        console.log(`${chalk.red('❌ Target tracker not found')}`);
+        return false;
+      }
+      
+      // Prepare the task line for the new tracker
+      let movedTaskLine = currentTaskLine;
+      
+      // Update the main tag to match the new tracker
+      const oldMainTag = `#${task.tracker}`;
+      const newMainTag = `#${response.targetTracker}`;
+      
+      if (movedTaskLine.includes(oldMainTag)) {
+        movedTaskLine = movedTaskLine.replace(oldMainTag, newMainTag);
+      } else {
+        // If no main tag exists, add it
+        const tagInsertIndex = movedTaskLine.search(/@\w+|📅|\u23eb|🔼|🔽/);
+        if (tagInsertIndex !== -1) {
+          movedTaskLine = movedTaskLine.slice(0, tagInsertIndex) + newMainTag + ' ' + movedTaskLine.slice(tagInsertIndex);
+        } else {
+          movedTaskLine = movedTaskLine + ' ' + newMainTag;
+        }
+      }
+      
+      // Confirm the move
+      const targetTracker = this.trackerManager!.getTracker(response.targetTracker);
+      const targetFriendlyName = targetTracker?.frontmatter?.friendlyName || response.targetTracker;
+      
+      console.log(`\n${chalk.bold('Move Summary:')}`);
+      console.log(`${chalk.gray('From:')} ${task.trackerFriendlyName} (${task.tracker})`);
+      console.log(`${chalk.green('To:')} ${targetFriendlyName} (${response.targetTracker})`);
+      console.log(`${chalk.gray('Task:')} ${task.title}`);
+      console.log(`${chalk.gray('Updated line:')} ${movedTaskLine.trim()}`);
+      
+      const confirmResponse = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: 'Proceed with move?',
+          default: true
+        }
+      ]);
+      
+      if (!confirmResponse.confirm) {
+        console.log(`${chalk.gray('Move cancelled')}`);
+        return false;
+      }
+      
+      // Step 1: Remove task from source tracker
+      sourceLines.splice(taskLineIndex, 1);
+      await fs.writeFile(sourceTrackerPath, sourceLines.join('\n'));
+      
+      // Step 2: Add task to target tracker
+      const success = await this.trackerManager!.appendToTracker(response.targetTracker, movedTaskLine.trim());
+      
+      if (success) {
+        console.log(`\n${chalk.green('✅ Task moved successfully!')}`);
+        console.log(`${chalk.cyan(task.title)}`);
+        console.log(`${chalk.gray('From:')} ${task.trackerFriendlyName}`);
+        console.log(`${chalk.green('To:')} ${targetFriendlyName}`);
+        console.log(`\n${chalk.gray('The task has been removed from')} ${chalk.cyan(task.trackerFriendlyName)}`);
+        console.log(`${chalk.gray('and added to')} ${chalk.green(targetFriendlyName)}`);
+        return true;
+      } else {
+        console.log(`${chalk.red('❌ Failed to add task to target tracker')}`);
+        // Try to restore the task to original location
+        sourceLines.splice(taskLineIndex, 0, currentTaskLine);
+        await fs.writeFile(sourceTrackerPath, sourceLines.join('\n'));
+        console.log(`${chalk.yellow('⚠️ Task restored to original location')}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('Error moving task:', error);
+      return false;
+    }
+  }
+  
+  private async closeTask(task: any, currentTaskLine: string, taskLineIndex: number, lines: string[], trackerPath: string): Promise<boolean> {
+    try {
+      console.log(`\n${chalk.bold('✅ Closing task (marking as completed)...')}`);
+      console.log(`${chalk.cyan(task.title)}`);
+      
+      const confirmResponse = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: 'Mark this task as completed?',
+          default: true
+        }
+      ]);
+      
+      if (!confirmResponse.confirm) {
+        console.log(`${chalk.gray('Close cancelled')}`);
+        return false;
+      }
+      
+      // Replace [ ] with [x] and add completion date
+      const completedLine = currentTaskLine.replace('- [ ]', '- [x]');
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Add completion date if not already present
+      let finalLine = completedLine;
+      if (!completedLine.includes('✅')) {
+        finalLine = completedLine + ` ✅ ${today}`;
+      }
+      
+      // Update the file
+      lines[taskLineIndex] = finalLine;
+      await fs.writeFile(trackerPath, lines.join('\n'));
+      
+      console.log(`\n${chalk.green('✅ Task completed successfully!')}`);
+      console.log(`${chalk.cyan(task.title)}`);
+      console.log(`${chalk.gray('Completed:')} ${today}`);
+      console.log(`${chalk.gray('In tracker:')} ${task.trackerFriendlyName}`);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Error closing task:', error);
+      return false;
+    }
+  }
+  
+  private async deleteTask(task: any, currentTaskLine: string, taskLineIndex: number, lines: string[], trackerPath: string): Promise<boolean> {
+    try {
+      console.log(`\n${chalk.bold.red('🗑️ Deleting task permanently...')}`);
+      console.log(`${chalk.cyan(task.title)}`);
+      console.log(`${chalk.gray('From:')} ${task.trackerFriendlyName}`);
+      console.log(`${chalk.yellow('⚠️ This action cannot be undone!')}`);
+      
+      const confirmResponse = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: 'Are you sure you want to delete this task permanently?',
+          default: false
+        }
+      ]);
+      
+      if (!confirmResponse.confirm) {
+        console.log(`${chalk.gray('Delete cancelled')}`);
+        return false;
+      }
+      
+      // Double confirmation for safety
+      const doubleConfirmResponse = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: 'Really delete? This will permanently remove the task from your tracker.',
+          default: false
+        }
+      ]);
+      
+      if (!doubleConfirmResponse.confirm) {
+        console.log(`${chalk.gray('Delete cancelled')}`);
+        return false;
+      }
+      
+      // Remove the line from the file
+      lines.splice(taskLineIndex, 1);
+      await fs.writeFile(trackerPath, lines.join('\n'));
+      
+      console.log(`\n${chalk.red('🗑️ Task deleted permanently!')}`);
+      console.log(`${chalk.gray('Deleted:')} ${task.title}`);
+      console.log(`${chalk.gray('From:')} ${task.trackerFriendlyName}`);
+      console.log(`${chalk.yellow('💡 The task has been removed from your tracker file.')}`);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      return false;
     }
   }
 
@@ -847,6 +1459,12 @@ class ChurnCLI {
         await this.done(taskQuery);
         break;
         
+      case 'edit':
+      case 'change':
+        const editQuery = args.slice(1).join(' ');
+        await this.edit(editQuery || undefined);
+        break;
+        
       case 'init':
         await this.init();
         break;
@@ -857,6 +1475,7 @@ class ChurnCLI {
         console.log('  next                - Show what to work on next');
         console.log('  tasks [tracker|all] - List all open tasks');
         console.log('  done "task"         - Mark a task as complete');
+        console.log('  edit|change ["task"] - Edit a task (title, priority, due date, tags)');
         console.log('  dump                - Interactive brain dump mode');
         console.log('  capture "text"      - Capture and route single text');
         console.log('  status              - Show system status');
@@ -868,6 +1487,9 @@ class ChurnCLI {
         console.log('  npm run cli tasks all');
         console.log('  npm run cli tasks gsc-ai');
         console.log('  npm run cli done "call client"');
+        console.log('  npm run cli edit "call client"');
+        console.log('  npm run cli change "call client"');
+        console.log('  npm run cli change              # Shows task picker');
         console.log('  npm run cli dump');
         console.log('  npm run cli capture "Call client about proposal"');
         console.log('  npm run cli status');
