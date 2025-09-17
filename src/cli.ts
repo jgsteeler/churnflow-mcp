@@ -386,6 +386,75 @@ class ChurnCLI {
     }
   }
 
+  async dump() {
+    try {
+      console.log('🧠 ChurnFlow Brain Dump Mode\n');
+      console.log('💡 Enter your thoughts one at a time, press Enter after each one');
+      console.log('✅ Type "quit" or press Enter on empty line to finish\n');
+      
+      const engine = await this.initializeCaptureEngine();
+      const thoughts: string[] = [];
+      let totalItems = 0;
+      let totalSuccess = 0;
+      
+      while (true) {
+        const input = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'thought',
+            message: `💭 Thought ${thoughts.length + 1}:`,
+            default: ''
+          }
+        ]);
+        
+        const thought = input.thought.trim();
+        
+        // Exit conditions
+        if (!thought || thought.toLowerCase() === 'quit') {
+          break;
+        }
+        
+        // Capture the thought immediately
+        console.log(`\n🔄 Processing: "${thought}"`);
+        const result = await engine.capture(thought);
+        
+        if (result.success) {
+          console.log(`✅ Routed to ${result.primaryTracker} (${Math.round(result.confidence * 100)}% confidence)`);
+          console.log(`📊 Generated ${result.itemResults.length} items`);
+          totalItems += result.itemResults.length;
+          totalSuccess += result.itemResults.filter(item => item.success).length;
+          
+          if (result.completedTasks.length > 0) {
+            console.log(`🎉 Detected ${result.completedTasks.length} task completions`);
+          }
+        } else {
+          console.log(`⚠️  Capture failed, but saved to emergency: ${result.error}`);
+        }
+        
+        thoughts.push(thought);
+        console.log(`\n${'─'.repeat(50)}`);
+      }
+      
+      // Summary
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`🎉 Brain Dump Complete!`);
+      console.log(`💭 Processed ${thoughts.length} thoughts`);
+      console.log(`📊 Generated ${totalItems} total items`);
+      console.log(`✅ ${totalSuccess} items successfully routed`);
+      
+      if (totalItems > totalSuccess) {
+        const failed = totalItems - totalSuccess;
+        console.log(`⚠️  ${failed} items need review (run: npm run cli review)`);
+      }
+      
+      console.log(`\n💡 Your brain dump is safely captured and organized!`);
+      
+    } catch (error) {
+      console.error('💥 Brain dump failed:', error);
+      process.exit(1);
+    }
+  }
+
   async init() {
     console.log('🚀 ChurnFlow Initialization\n');
     
@@ -441,6 +510,10 @@ class ChurnCLI {
         await this.review(targetTracker);
         break;
         
+      case 'dump':
+        await this.dump();
+        break;
+        
       case 'init':
         await this.init();
         break;
@@ -448,11 +521,13 @@ class ChurnCLI {
       default:
         console.log('🧐 ChurnFlow CLI\n');
         console.log('Available commands:');
-        console.log('  capture "text"      - Capture and route text');
+        console.log('  dump                - Interactive brain dump mode');
+        console.log('  capture "text"      - Capture and route single text');
         console.log('  status              - Show system status');
         console.log('  review [tracker]    - Review flagged items');
         console.log('  init                - Initialize configuration');
         console.log('\nExamples:');
+        console.log('  npm run cli dump');
         console.log('  npm run cli capture "Call client about proposal"');
         console.log('  npm run cli status');
         console.log('  npm run cli review');
