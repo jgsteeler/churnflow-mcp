@@ -178,7 +178,9 @@ export class CaptureEngine {
     } catch (error) {
       console.error('❌ Failed to flag item for review:', error);
       
-      // Fallback to old behavior if ReviewManager fails
+      // Fallback mechanism: If ReviewManager integration fails (e.g., throws an error),
+      // this fallback writes the review entry directly to the tracker files.
+      // This ensures that review items are not lost even if the review queue cannot be updated.
       const reviewEntry = this.formatReviewEntry(input, inference);
       const success = await this.appendToReviewTracker(reviewEntry);
       
