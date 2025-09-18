@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2025-09-17
+
+### 🎯 CRITICAL INTEGRATION: Complete Review System Workflow
+**Connects CaptureEngine to ReviewManager, enabling the complete ADHD-friendly capture → review → action workflow**
+
+### ✨ Added
+- **ReviewManager Integration in CaptureEngine** - Low-confidence captures now route through ReviewManager instead of direct tracker writing
+  - Replaces `routeToReview()` direct tracker writing with proper `ReviewManager.flagItemForReview()`
+  - Automatic keyword extraction and metadata generation for enhanced review workflows
+  - Confidence-based routing: < 0.7 threshold → ReviewManager, ≥ 0.7 → direct placement
+  - Action items require higher confidence (0.8+) due to stricter validation criteria
+- **Enhanced Review Metadata** - Comprehensive item preparation for human review
+  - Keywords automatically extracted using `InferenceEngine.extractKeywords()`
+  - Default urgency, type classification, and editable field configuration
+  - Review status logic: "pending" vs "flagged" based on confidence levels
+- **Graceful Fallback System** - Robust error handling ensures no thoughts are lost
+  - If ReviewManager fails, automatically falls back to old tracker-writing behavior
+  - Emergency capture maintains data integrity even during system failures
+
+### 🔗 Fixed Integration Gaps
+- **Broken Review Workflow** - Previously, low-confidence items bypassed ReviewManager infrastructure
+- **CLI Review Command Isolation** - Review items weren't accessible via `npm run cli review`
+- **Incomplete ADHD Workflow** - The capture → review → action → edit cycle was disconnected
+- **Unutilized Review Metadata** - Confidence scoring and metadata weren't being leveraged
+
+### 🧪 Testing & Quality
+- **5 Comprehensive Integration Tests** - Complete end-to-end workflow validation
+  - Low-confidence routing through ReviewManager
+  - High-confidence bypass for direct placement
+  - Keyword extraction and metadata preparation
+  - Error handling and fallback scenarios
+  - Configuration threshold validation
+- **All 161 Existing Tests Pass** - Zero breaking changes to existing functionality
+- **Manual End-to-End Validation** - Confirmed complete workflow integration
+
+### 🧠 ADHD-Optimized Results
+- **Complete Workflow** - Now supports full capture → review → action → edit cycle
+- **Human Oversight** - Low-confidence captures properly flagged for human review
+- **Trust & Control** - Users can review and refine AI routing decisions
+- **Zero Cognitive Overhead** - High-confidence items still bypass review for instant placement
+- **Enhanced Metadata** - Keywords and context preserved for better review decisions
+
+### 🔧 Technical Implementation
+```typescript
+// Before: Direct tracker writing bypassed ReviewManager
+const success = await this.appendToReviewTracker(reviewEntry);
+
+// After: Proper ReviewManager integration with metadata
+const reviewItem = this.reviewManager.flagItemForReview(
+  input.text,
+  inference?.confidence || 0.1,
+  inference?.primaryTracker || 'review',
+  'actions',
+  'capture',
+  {
+    keywords: this.inferenceEngine.extractKeywords(input.text),
+    urgency: 'medium',
+    type: inference?.generatedItems?.[0]?.itemType || 'review',
+    editableFields: ['tracker', 'priority', 'tags', 'type']
+  }
+);
+```
+
+### 📈 Impact Metrics
+- **Complete Integration** - CaptureEngine now properly utilizes all ReviewManager infrastructure
+- **Enhanced CLI Access** - Review items accessible via `npm run cli review` command
+- **Maintained Performance** - High-confidence items continue direct routing for zero friction
+- **Production Ready** - Comprehensive error handling and fallback mechanisms
+
+### 🏆 Key Achievement
+**Complete Review System Integration** - ChurnFlow now provides the complete ADHD-friendly productivity workflow from capture to review to action. Low-confidence captures are properly flagged for human oversight while maintaining zero-friction direct placement for high-confidence items. This completes the critical missing link in the productivity system, ensuring users can trust AI decisions while maintaining control over their workflow.
+
 ## [0.3.3] - 2025-09-17
 
 ### 🎯 MAJOR FEATURE: Complete Task Management Suite
