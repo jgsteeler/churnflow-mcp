@@ -76,8 +76,23 @@ export class CaptureEngine {
       const completedTasks = [];
       for (const completion of inference.taskCompletions) {
         console.log(`✅ Task completion detected: ${completion.description} in ${completion.tracker}`);
-        completedTasks.push(completion);
-        // TODO: Actually mark tasks as complete in tracker files
+        
+        // Actually mark the task as complete in the tracker file
+        const success = await this.trackerManager.markTaskComplete(
+          completion.tracker,
+          completion.description
+        );
+        
+        completedTasks.push({
+          ...completion,
+          success
+        });
+        
+        if (success) {
+          console.log(`✅ Successfully marked task as complete: ${completion.description}`);
+        } else {
+          console.error(`❌ Failed to mark task as complete: ${completion.description}`);
+        }
       }
 
       // Process generated items
