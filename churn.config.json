@@ -1,8 +1,8 @@
 {
-  "collectionsPath": "/tmp/churn-test/Collections",
-  "trackingPath": "/tmp/churn-test/Tracking", 
-  "crossrefPath": "/tmp/churn-test/Tracking/crossref.json",
+  "collectionsPath": "/Users/jack/code/Collections/Churn/Collections",
+  "trackingPath": "/Users/jack/code/Collections/Churn/Tracking",
+  "crossrefPath": "/Users/jack/code/Collections/Churn/crossref/crossref.json",
   "aiProvider": "openai",
-  "aiApiKey": "test-key",
-  "confidenceThreshold": 0.7
+  "confidenceThreshold": 0.7,
+  "note": "Set OPENAI_API_KEY environment variable or add aiApiKey here"
 }

@@ -38,6 +38,7 @@ describe('CaptureEngine', () => {
       getTracker: jest.fn(),
       getTrackersByContext: jest.fn(),
       appendToTracker: jest.fn(),
+      appendReviewToTracker: jest.fn(),
       getContextMap: jest.fn(),
       refresh: jest.fn()
     } as any;
@@ -198,6 +199,8 @@ describe('CaptureEngine', () => {
   describe('review routing', () => {
     beforeEach(async () => {
       mockTrackerManagerInstance.initialize.mockResolvedValue(undefined);
+      // Setup default mock for getTrackersByContext to prevent emergencyCapture failures
+      mockTrackerManagerInstance.getTrackersByContext.mockReturnValue([]);
       await captureEngine.initialize();
     });
 
@@ -227,7 +230,7 @@ describe('CaptureEngine', () => {
       };
       
       mockTrackerManagerInstance.getTracker.mockReturnValue(mockReviewTracker);
-      mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);
+      mockTrackerManagerInstance.appendReviewToTracker.mockResolvedValue(true);
 
       const result = await captureEngine.capture('Ambiguous input');
 
@@ -266,7 +269,7 @@ describe('CaptureEngine', () => {
           filePath: '/path/to/system.md'
         });
       
-      mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);
+      mockTrackerManagerInstance.appendReviewToTracker.mockResolvedValue(true);
 
       const result = await captureEngine.capture('Test input');
 

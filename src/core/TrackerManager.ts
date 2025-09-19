@@ -325,6 +325,49 @@ export class TrackerManager {
       return false;
     }
   }
+  
+  /**
+   * Append a review item to the Review Queue section with proper placement and ordering
+   */
+  async appendReviewToTracker(
+    tag: string,
+    formattedEntry: string,
+  ): Promise<boolean> {
+    const tracker = this.trackers.get(tag);
+    if (!tracker) {
+      console.error(`Tracker not found: ${tag}`);
+      return false;
+    }
+
+    try {
+      // Read current file content
+      const currentContent = await fs.readFile(tracker.filePath, "utf-8");
+      const parsed = matter(currentContent);
+
+      // Use the new section placement logic
+      const updatedLines = this.insertEntryIntoSection(
+        parsed.content.split("\n"),
+        "## Review Queue",
+        formattedEntry,
+        false, // Don't sort review items
+      );
+
+      // Reconstruct the file with frontmatter
+      const updatedContent = matter.stringify(
+        updatedLines.join("\n"),
+        parsed.data,
+      );
+
+      // Write back to file
+      await fs.writeFile(tracker.filePath, updatedContent, "utf-8");
+
+      console.log(`Successfully appended review item to tracker: ${tag}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to append review item to tracker ${tag}:`, error);
+      return false;
+    }
+  }
 
   /**
    * Find the index of a section header
@@ -416,7 +459,8 @@ export class TrackerManager {
       newLines.splice(insertIndex, entriesToRemove);
     }
 
-    // Insert formatted entries
+    // Insert formatted entries with proper blank line
+    // NOTE: Fixed bug where newEntry was already in existingEntries but not correctly inserted
     const entriesToInsert = ["", ...existingEntries];
     newLines.splice(insertIndex, 0, ...entriesToInsert);
 
