@@ -1,6 +1,7 @@
 import { CaptureInput, CaptureResult, ChurnConfig } from "../types/churn.js";
 import { TrackerManager } from "./TrackerManager.js";
 import { InferenceEngine } from "./InferenceEngine.js";
+import { FormattingUtils } from "../utils/FormattingUtils.js";
 
 /**
  * Main capture engine for ChurnFlow
@@ -240,14 +241,15 @@ export class CaptureEngine {
    * Format an entry for the review queue
    */
   private formatReviewEntry(input: CaptureInput, inference?: any): string {
-    const timestamp = new Date().toISOString().split("T")[0];
-    let entry = `- [ ] REVIEW NEEDED [${timestamp}]: ${input.text}`;
-
+    const confidence = inference?.confidence || 0.1;
+    const description = `REVIEW NEEDED: ${input.text}`;
+    
     if (inference) {
-      entry += ` (AI suggested: ${inference.inferredTracker}, confidence: ${Math.round(inference.confidence * 100)}%)`;
+      const enhancedDescription = `${description} (AI suggested: ${inference.inferredTracker})`;
+      return FormattingUtils.formatEntry("review", enhancedDescription, { confidence });
     }
-
-    return entry;
+    
+    return FormattingUtils.formatEntry("review", description, { confidence });
   }
 
   /**
