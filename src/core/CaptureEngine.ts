@@ -257,16 +257,13 @@ export class CaptureEngine {
    */
   private async appendToReviewTracker(entry: string): Promise<boolean> {
     // Try to find a review or inbox tracker
-    const reviewTracker =
-      this.trackerManager.getTracker("review") ||
-      this.trackerManager.getTracker("inbox") ||
-      this.trackerManager.getTracker("churn-system"); // Fallback to system tracker
-
+    const reviewTracker = this.trackerManager.getTracker("review") || 
+                         this.trackerManager.getTracker("inbox") ||
+                         this.trackerManager.getTracker("churn-system"); // Fallback to system tracker
+    
     if (reviewTracker) {
-      return await this.trackerManager.appendToTracker(
-        reviewTracker.frontmatter.tag,
-        entry,
-      );
+      // Use the dedicated method to append to the Review Queue section
+      return await this.trackerManager.appendReviewToTracker(reviewTracker.frontmatter.tag, entry);
     }
 
     return false;
