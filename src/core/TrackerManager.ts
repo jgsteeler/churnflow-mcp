@@ -677,4 +677,60 @@ export class TrackerManager {
       commonIssues: {}, // Would track most frequent formatting issues
     };
   }
+
+  /**
+   * Mark a task as complete in a tracker file
+   */
+  async markTaskComplete(tracker: string, taskDescription: string): Promise<boolean> {
+    try {
+      const trackerObj = this.trackers.get(tracker);
+      if (!trackerObj) {
+        console.error(`Tracker not found: ${tracker}`);
+        return false;
+      }
+
+      // Read the tracker file
+      const content = await fs.readFile(trackerObj.filePath, 'utf-8');
+      const parsed = matter(content);
+      const lines = parsed.content.split('\n');
+
+      // Find and mark the task as complete
+      let found = false;
+      const updatedLines = lines.map(line => {
+        if (found) return line;
+        
+        const trimmed = line.trim();
+        // Look for incomplete tasks that match the description
+        if (trimmed.startsWith('- [ ]') && 
+            trimmed.toLowerCase().includes(taskDescription.toLowerCase())) {
+          found = true;
+          // Replace [ ] with [x] and add completion date
+          const completedLine = line.replace('- [ ]', '- [x]');
+          const today = FormattingUtils.formatDate(new Date());
+          
+          // Add completion date if not already present
+          if (!completedLine.includes('✅')) {
+            return completedLine + ` ✅ ${today}`;
+          }
+          return completedLine;
+        }
+        return line;
+      });
+
+      if (!found) {
+        console.log(`Task not found or already completed in ${tracker}: ${taskDescription}`);
+        return false;
+      }
+
+      // Write the updated content back to the file
+      const updatedContent = matter.stringify(updatedLines.join('\n'), parsed.data);
+      await fs.writeFile(trackerObj.filePath, updatedContent, 'utf-8');
+      
+      console.log(`✅ Task marked as complete in ${tracker}: ${taskDescription}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to mark task complete in ${tracker}:`, error);
+      return false;
+    }
+  }
 }

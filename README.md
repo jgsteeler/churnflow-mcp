@@ -1,16 +1,17 @@
-# ChurnFlow MCP Server v0.3.0
+# ChurnFlow MCP Server v0.3.4
 
 > An ADHD-friendly productivity system powered by AI agents and GitHub Copilot
 
 **ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with GitHub Copilot integration and comprehensive AI assistant support, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
 
-## 🎉 New in v0.3.0: GitHub Copilot Integration
+## 🎉 New in v0.3.4: Complete Review System Integration
 
+- **🔗 Review System Integration**: CaptureEngine now properly routes low-confidence items through ReviewManager
+- **🧠 Complete ADHD Workflow**: Full capture → review → action → edit cycle now functional
 - **🤖 GitHub Copilot Ready**: Full MCP server integration with three AI tools
-- **🔧 Production Grade**: 122 comprehensive tests, robust error handling
+- **🔧 Production Grade**: 166 comprehensive tests, robust error handling with graceful fallbacks
 - **⚡ Multi-item Capture**: Single input generates multiple routed items
 - **📐 Perfect Formatting**: Consistent ISO dates, priority emojis, section placement
-- **🧠 ADHD-Optimized**: Brain dump style capture with minimal cognitive overhead
 
 ## 🧠 The Problem
 
@@ -132,11 +133,12 @@ npm run cli status
 - **Natural Conversations**: *"Use ChurnFlow to capture..."* or *"What should I work on?"*
 - **Cross-Interface Sync**: Seamless between AI assistants and CLI
 
-### 🧠 Smart Capture
+### 🧐 Smart Capture
 - **Multi-Item Processing**: Single brain dump generates multiple routed items
 - **Context Inference**: AI routes to appropriate trackers automatically
 - **Natural Language**: "Working on Gibson website, need to call client, update docs"
 - **Confidence-Based Routing**: High confidence items placed directly, low confidence flagged for review
+- **Complete Review Integration**: Low-confidence items properly routed through ReviewManager for human oversight
 
 ### ✨ Perfect Formatting (v0.2.2)
 - **ISO Date Standards**: Consistent `2025-09-16` and `2025-09-16 14:30` formats
@@ -169,11 +171,15 @@ We welcome contributions from the ADHD and neurodivergent community! Please see 
 - [x] **v0.2.1**: Multi-item capture with cross-tracker routing
 - [x] **v0.2.2**: Complete formatting consistency and perfect section placement  
 - [x] **v0.3.0**: MCP server integration with GitHub Copilot support
+- [x] **v0.3.1**: Review Process system foundation
+- [x] **v0.3.2**: Complete ADHD dashboard & task management system  
+- [x] **v0.3.3**: Complete task editing and lifecycle management
+- [x] **v0.3.4**: Review system integration - complete capture → review → action workflow
 
 ### 🎯 In Progress  
-- [ ] **v0.3.1**: Review Process system with AI assistant integration
-- [ ] Enhanced dashboard and review tools for both CLI and AI assistants
-- [ ] Confidence-based item flagging and review workflows
+- [ ] **v0.3.5**: Enhanced review dashboard and batch processing tools
+- [ ] Advanced review analytics and confidence scoring improvements
+- [ ] Review workflow optimization based on user patterns
 
 ### 🚀 Future
 - [ ] **v0.3.2+**: Voice capture integration building on MCP foundation

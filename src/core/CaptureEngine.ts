@@ -1,7 +1,11 @@
-import { CaptureInput, CaptureResult, ChurnConfig } from "../types/churn.js";
-import { TrackerManager } from "./TrackerManager.js";
-import { InferenceEngine } from "./InferenceEngine.js";
-import { FormattingUtils } from "../utils/FormattingUtils.js";
+import { 
+  CaptureInput, 
+  CaptureResult, 
+  ChurnConfig 
+} from '../types/churn.js';
+import { TrackerManager } from './TrackerManager.js';
+import { InferenceEngine } from './InferenceEngine.js';
+import { ReviewManager } from './ReviewManager.js';
 
 /**
  * Main capture engine for ChurnFlow
@@ -15,11 +19,13 @@ import { FormattingUtils } from "../utils/FormattingUtils.js";
 export class CaptureEngine {
   private trackerManager: TrackerManager;
   private inferenceEngine: InferenceEngine;
+  private reviewManager: ReviewManager;
   private initialized = false;
 
   constructor(private config: ChurnConfig) {
     this.trackerManager = new TrackerManager(config);
     this.inferenceEngine = new InferenceEngine(config, this.trackerManager);
+    this.reviewManager = new ReviewManager(config, this.trackerManager);
   }
 
   /**
@@ -75,11 +81,32 @@ export class CaptureEngine {
       // Process task completions first
       const completedTasks = [];
       for (const completion of inference.taskCompletions) {
+<<<<<<< HEAD
         console.log(
           `✅ Task completion detected: ${completion.description} in ${completion.tracker}`,
         );
         completedTasks.push(completion);
         // TODO: Actually mark tasks as complete in tracker files
+=======
+        console.log(`✅ Task completion detected: ${completion.description} in ${completion.tracker}`);
+        
+        // Actually mark the task as complete in the tracker file
+        const success = await this.trackerManager.markTaskComplete(
+          completion.tracker,
+          completion.description
+        );
+        
+        completedTasks.push({
+          ...completion,
+          success
+        });
+        
+        if (success) {
+          console.log(`✅ Successfully marked task as complete: ${completion.description}`);
+        } else {
+          console.error(`❌ Failed to mark task as complete: ${completion.description}`);
+        }
+>>>>>>> origin/main
       }
 
       // Process generated items
@@ -145,6 +172,7 @@ export class CaptureEngine {
     input: CaptureInput,
     inference?: any,
   ): Promise<CaptureResult> {
+<<<<<<< HEAD
     console.log("📋 Routing to review queue (needs human attention)");
 
     // Create a review entry with context
@@ -169,6 +197,64 @@ export class CaptureEngine {
       completedTasks: [],
       requiresReview: true,
     };
+=======
+    console.log('📋 Routing to review queue (needs human attention)');
+    
+    try {
+      // Use ReviewManager to flag item for review instead of direct tracker writing
+      const reviewItem = this.reviewManager.flagItemForReview(
+        input.text,
+        inference?.confidence || 0.1,
+        inference?.primaryTracker || 'review',
+        'actions', // default section
+        'capture', // source
+        {
+          keywords: this.inferenceEngine.extractKeywords(input.text),
+          urgency: 'medium',
+          type: inference?.generatedItems?.[0]?.itemType || 'review',
+          editableFields: ['tracker', 'priority', 'tags', 'type']
+        }
+      );
+
+      return {
+        success: true,
+        primaryTracker: 'review',
+        confidence: inference?.confidence || 0.1,
+        itemResults: [{
+          success: true,
+          tracker: 'review',
+          itemType: 'review',
+          formattedEntry: `Review item flagged: ${reviewItem.id}`,
+          error: undefined
+        }],
+        completedTasks: [],
+        requiresReview: true
+      };
+    } catch (error) {
+      console.error('❌ Failed to flag item for review:', error);
+      
+      // Fallback mechanism: If ReviewManager integration fails (e.g., throws an error),
+      // this fallback writes the review entry directly to the tracker files.
+      // This ensures that review items are not lost even if the review queue cannot be updated.
+      const reviewEntry = this.formatReviewEntry(input, inference);
+      const success = await this.appendToReviewTracker(reviewEntry);
+      
+      return {
+        success,
+        primaryTracker: 'review',
+        confidence: inference?.confidence || 0.1,
+        itemResults: [{
+          success,
+          tracker: 'review',
+          itemType: 'review',
+          formattedEntry: reviewEntry,
+          error: success ? undefined : 'Failed to save to review tracker'
+        }],
+        completedTasks: [],
+        requiresReview: true
+      };
+    }
+>>>>>>> origin/main
   }
 
   /**

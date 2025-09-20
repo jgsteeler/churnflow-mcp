@@ -84,6 +84,13 @@ export interface TaskCompletion {
 }
 
 /**
+ * Task completion result after processing
+ */
+export interface TaskCompletionResult extends TaskCompletion {
+  success: boolean;
+}
+
+/**
  * AI inference result for captured items (supports multiple items)
  */
 export interface InferenceResult {
@@ -208,7 +215,7 @@ export interface CaptureResult {
   primaryTracker: string;
   confidence: number;
   itemResults: CaptureItemResult[];
-  completedTasks: TaskCompletion[];
+  completedTasks: TaskCompletionResult[];
   requiresReview: boolean;
   error?: string;
 }
