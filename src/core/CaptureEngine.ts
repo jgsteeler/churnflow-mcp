@@ -6,6 +6,7 @@ import {
 import { TrackerManager } from './TrackerManager.js';
 import { InferenceEngine } from './InferenceEngine.js';
 import { ReviewManager } from './ReviewManager.js';
+import { FormattingUtils } from '../utils/FormattingUtils.js';
 
 /**
  * Main capture engine for ChurnFlow
@@ -81,13 +82,6 @@ export class CaptureEngine {
       // Process task completions first
       const completedTasks = [];
       for (const completion of inference.taskCompletions) {
-<<<<<<< HEAD
-        console.log(
-          `✅ Task completion detected: ${completion.description} in ${completion.tracker}`,
-        );
-        completedTasks.push(completion);
-        // TODO: Actually mark tasks as complete in tracker files
-=======
         console.log(`✅ Task completion detected: ${completion.description} in ${completion.tracker}`);
         
         // Actually mark the task as complete in the tracker file
@@ -106,7 +100,6 @@ export class CaptureEngine {
         } else {
           console.error(`❌ Failed to mark task as complete: ${completion.description}`);
         }
->>>>>>> origin/main
       }
 
       // Process generated items
@@ -172,32 +165,6 @@ export class CaptureEngine {
     input: CaptureInput,
     inference?: any,
   ): Promise<CaptureResult> {
-<<<<<<< HEAD
-    console.log("📋 Routing to review queue (needs human attention)");
-
-    // Create a review entry with context
-    const reviewEntry = this.formatReviewEntry(input, inference);
-
-    // Try to append to a review tracker or create inline review
-    const success = await this.appendToReviewTracker(reviewEntry);
-
-    return {
-      success,
-      primaryTracker: "review",
-      confidence: inference?.confidence || 0.1,
-      itemResults: [
-        {
-          success,
-          tracker: "review",
-          itemType: "review",
-          formattedEntry: reviewEntry,
-          error: success ? undefined : "Failed to save to review tracker",
-        },
-      ],
-      completedTasks: [],
-      requiresReview: true,
-    };
-=======
     console.log('📋 Routing to review queue (needs human attention)');
     
     try {
@@ -254,7 +221,6 @@ export class CaptureEngine {
         requiresReview: true
       };
     }
->>>>>>> origin/main
   }
 
   /**
