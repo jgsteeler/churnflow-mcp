@@ -5,23 +5,23 @@ import {
   ReviewSource,
   ItemType,
   Priority,
-  ChurnConfig
-} from '../types/churn.js';
-import { TrackerManager } from './TrackerManager.js';
-import { FormattingUtils } from '../utils/FormattingUtils.js';
+  ChurnConfig,
+} from "../types/churn.js";
+import { TrackerManager } from "./TrackerManager.js";
+import { FormattingUtils } from "../utils/FormattingUtils.js";
 
 /**
  * ReviewManager - Core class for managing reviewable items and their workflows
- * 
+ *
  * Provides ADHD-friendly interface for reviewing, editing, and managing items
  * that need human attention before final placement in trackers.
  */
 export class ReviewManager {
   private reviewItems: Map<string, ReviewableItem> = new Map();
-  
+
   constructor(
     private config: ChurnConfig,
-    private trackerManager: TrackerManager
+    private trackerManager: TrackerManager,
   ) {}
 
   /**
@@ -38,7 +38,7 @@ export class ReviewManager {
       urgency?: Priority;
       type?: ItemType;
       editableFields?: string[];
-    } = {}
+    } = {},
   ): ReviewableItem {
     const id = this.generateItemId();
     const reviewItem: ReviewableItem = {
@@ -49,13 +49,18 @@ export class ReviewManager {
       currentTracker: tracker,
       timestamp: new Date(),
       source,
-      reviewStatus: confidence < 0.5 ? 'pending' : 'flagged',
+      reviewStatus: confidence < 0.5 ? "pending" : "flagged",
       metadata: {
         keywords: metadata.keywords || [],
-        urgency: metadata.urgency || 'medium',
-        type: metadata.type || 'review',
-        editableFields: metadata.editableFields || ['tracker', 'priority', 'tags', 'type']
-      }
+        urgency: metadata.urgency || "medium",
+        type: metadata.type || "review",
+        editableFields: metadata.editableFields || [
+          "tracker",
+          "priority",
+          "tags",
+          "type",
+        ],
+      },
     };
 
     this.reviewItems.set(id, reviewItem);
@@ -67,30 +72,38 @@ export class ReviewManager {
    */
   getItemsNeedingReview(tracker?: string): ReviewableItem[] {
     const items = Array.from(this.reviewItems.values());
-    
+
     if (tracker) {
-      return items.filter(item => 
-        item.currentTracker === tracker && 
-        (item.reviewStatus === 'pending' || item.reviewStatus === 'flagged')
+      return items.filter(
+        (item) =>
+          item.currentTracker === tracker &&
+          (item.reviewStatus === "pending" || item.reviewStatus === "flagged"),
       );
     }
-    
-    return items.filter(item => 
-      item.reviewStatus === 'pending' || item.reviewStatus === 'flagged'
+
+    return items.filter(
+      (item) =>
+        item.reviewStatus === "pending" || item.reviewStatus === "flagged",
     );
   }
 
   /**
    * Get review status counts for dashboard indicators
    */
-  getReviewStatus(): { pending: number; flagged: number; confirmed: number; total: number } {
+  getReviewStatus(): {
+    pending: number;
+    flagged: number;
+    confirmed: number;
+    total: number;
+  } {
     const items = Array.from(this.reviewItems.values());
-    
+
     return {
-      pending: items.filter(item => item.reviewStatus === 'pending').length,
-      flagged: items.filter(item => item.reviewStatus === 'flagged').length,
-      confirmed: items.filter(item => item.reviewStatus === 'confirmed').length,
-      total: items.length
+      pending: items.filter((item) => item.reviewStatus === "pending").length,
+      flagged: items.filter((item) => item.reviewStatus === "flagged").length,
+      confirmed: items.filter((item) => item.reviewStatus === "confirmed")
+        .length,
+      total: items.length,
     };
   }
 
@@ -106,7 +119,7 @@ export class ReviewManager {
       tags?: string[];
       type?: ItemType;
       content?: string;
-    }
+    },
   ): Promise<boolean> {
     const item = this.reviewItems.get(itemId);
     if (!item) {
@@ -114,38 +127,38 @@ export class ReviewManager {
     }
 
     switch (action) {
-      case 'accept':
+      case "accept":
         return this.acceptItem(item);
 
-      case 'edit-priority':
+      case "edit-priority":
         if (newValues?.priority) {
           item.metadata.urgency = newValues.priority;
           return this.updateItemContent(item);
         }
         break;
 
-      case 'edit-tags':
+      case "edit-tags":
         if (newValues?.tags) {
           item.metadata.keywords = newValues.tags;
           return this.updateItemContent(item);
         }
         break;
 
-      case 'edit-type':
+      case "edit-type":
         if (newValues?.type) {
           item.metadata.type = newValues.type;
           return this.updateItemContent(item);
         }
         break;
 
-      case 'move':
+      case "move":
         if (newValues?.tracker) {
           item.currentTracker = newValues.tracker;
           return this.updateItemContent(item);
         }
         break;
 
-      case 'reject':
+      case "reject":
         return this.rejectItem(itemId);
 
       default:
@@ -166,25 +179,25 @@ export class ReviewManager {
         item.content,
         {
           priority: item.metadata.urgency,
-          tag: item.metadata.keywords[0] // Use first keyword as tag if available
-        }
+          tag: item.metadata.keywords[0], // Use first keyword as tag if available
+        },
       );
 
       // Write to the target tracker
       const success = await this.trackerManager.appendToTracker(
         item.currentTracker,
-        formattedContent
+        formattedContent,
       );
 
       if (success) {
-        item.reviewStatus = 'confirmed';
+        item.reviewStatus = "confirmed";
         this.reviewItems.delete(item.id); // Remove from review queue
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Error accepting review item:', error);
+      console.error("Error accepting review item:", error);
       return false;
     }
   }
@@ -200,14 +213,14 @@ export class ReviewManager {
         item.content,
         {
           priority: item.metadata.urgency,
-          tag: item.metadata.keywords[0] // Use first keyword as tag if available
-        }
+          tag: item.metadata.keywords[0], // Use first keyword as tag if available
+        },
       );
-      
+
       item.content = formattedContent;
       return true;
     } catch (error) {
-      console.error('Error updating item content:', error);
+      console.error("Error updating item content:", error);
       return false;
     }
   }
@@ -242,15 +255,24 @@ export class ReviewManager {
    * Batch process multiple review items
    */
   async batchProcessReview(
-    actions: Array<{ itemId: string; action: ReviewAction; newValues?: any }>
-  ): Promise<{ success: number; failed: number; results: Array<{ itemId: string; success: boolean; error?: string }> }> {
-    const results: Array<{ itemId: string; success: boolean; error?: string }> = [];
+    actions: Array<{ itemId: string; action: ReviewAction; newValues?: any }>,
+  ): Promise<{
+    success: number;
+    failed: number;
+    results: Array<{ itemId: string; success: boolean; error?: string }>;
+  }> {
+    const results: Array<{ itemId: string; success: boolean; error?: string }> =
+      [];
     let successCount = 0;
     let failedCount = 0;
 
     for (const { itemId, action, newValues } of actions) {
       try {
-        const success = await this.processReviewAction(itemId, action, newValues);
+        const success = await this.processReviewAction(
+          itemId,
+          action,
+          newValues,
+        );
         results.push({ itemId, success });
         if (success) {
           successCount++;
@@ -258,10 +280,10 @@ export class ReviewManager {
           failedCount++;
         }
       } catch (error) {
-        results.push({ 
-          itemId, 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error'
+        results.push({
+          itemId,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
         });
         failedCount++;
       }
@@ -270,7 +292,7 @@ export class ReviewManager {
     return {
       success: successCount,
       failed: failedCount,
-      results
+      results,
     };
   }
 
@@ -278,11 +300,12 @@ export class ReviewManager {
    * Clear all confirmed items from the review queue
    */
   clearConfirmedItems(): number {
-    const confirmedItems = Array.from(this.reviewItems.entries())
-      .filter(([_, item]) => item.reviewStatus === 'confirmed');
-    
+    const confirmedItems = Array.from(this.reviewItems.entries()).filter(
+      ([_, item]) => item.reviewStatus === "confirmed",
+    );
+
     confirmedItems.forEach(([id, _]) => this.reviewItems.delete(id));
-    
+
     return confirmedItems.length;
   }
 
