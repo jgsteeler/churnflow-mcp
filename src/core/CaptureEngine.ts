@@ -23,6 +23,7 @@ export class CaptureEngine {
   private inferenceEngine: InferenceEngine;
   private reviewManager: ReviewManager;
   private databaseManager: DatabaseManager;
+  private databaseAvailable = false;
   private initialized = false;
 
   constructor(private config: ChurnConfig) {
@@ -46,9 +47,11 @@ export class CaptureEngine {
       // Initialize database (non-blocking - capture still works if DB fails)
       try {
         await this.databaseManager.initialize();
+        this.databaseAvailable = true;
         console.log("✅ Database ready for capture storage!");
       } catch (dbError) {
-        console.warn("⚠️ Database initialization failed - using file-only mode:", dbError);
+        this.databaseAvailable = false;
+        console.warn("⚠️ Database not available - using file-only mode. Run 'npm run db:setup' to enable database features.");
       }
       
       this.initialized = true;
@@ -154,9 +157,13 @@ export class CaptureEngine {
       // Determine overall success
       const overallSuccess = itemResults.some((result) => result.success);
       
-      // Save to database - required for capture success
-      if (overallSuccess) {
-        await this.saveCaptureToDatabase(captureInput, inference, itemResults, overallSuccess);
+      // Save to database if available (optional - doesn't affect capture success)
+      if (overallSuccess && this.databaseAvailable) {
+        try {
+          await this.saveCaptureToDatabase(captureInput, inference, itemResults, overallSuccess);
+        } catch (dbError) {
+          console.warn("⚠️ Failed to save to database (file saved successfully):", dbError);
+        }
       }
 
       return {

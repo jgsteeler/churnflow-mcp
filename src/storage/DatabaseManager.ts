@@ -56,8 +56,6 @@ export class DatabaseManager {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    console.log('🗄️ Initializing ChurnFlow database...');
-
     try {
       // Configure SQLite for optimal performance
       if (this.dbConfig.enableWAL !== false) {
@@ -68,20 +66,22 @@ export class DatabaseManager {
       }
       this.sqlite.exec('PRAGMA synchronous = NORMAL;');
 
-      // Run migrations to ensure tables exist
-      await this.runMigrations();
-
-      // Initialize with seed data if needed
-      await this.seedInitialData();
-
-      // Re-enable full-text search with fixed schema
-      await this.createFullTextSearch();
+      // Verify database exists and is accessible
+      await this.verifyDatabaseSetup();
 
       this.isInitialized = true;
-      console.log('✅ ChurnFlow database initialized successfully!');
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      console.error('❌ Database not available:', error);
       throw error;
+    }
+  }
+
+  private async verifyDatabaseSetup(): Promise<void> {
+    // Quick check that essential tables exist
+    try {
+      await this.db.select().from(captures).limit(1);
+    } catch (error) {
+      throw new Error('Database not set up. Run: npm run db:setup');
     }
   }
 
@@ -350,6 +350,52 @@ export class DatabaseManager {
       .from(captures);
       
     return stats || { inbox: 0, active: 0, completed: 0, needingReview: 0, overdue: 0 };
+  }
+
+  // DATABASE SETUP METHODS (Only called during setup, not normal operations)
+
+  async setupDatabase(): Promise<void> {
+    console.log('🗄️ Setting up ChurnFlow database...');
+    
+    try {
+      // Run migrations to ensure tables exist
+      await this.runMigrations();
+
+      // Initialize with seed data if needed
+      await this.seedInitialData();
+
+      // Enable full-text search
+      await this.createFullTextSearch();
+
+      console.log('✅ ChurnFlow database setup completed successfully!');
+    } catch (error) {
+      console.error('❌ Failed to setup database:', error);
+      throw error;
+    }
+  }
+
+  async resetDatabase(): Promise<void> {
+    console.log('🗑️ Resetting ChurnFlow database...');
+    
+    try {
+      // Drop all tables
+      this.sqlite.exec('DROP TABLE IF EXISTS captures_fts;');
+      this.sqlite.exec('DROP TABLE IF EXISTS capture_collections;');
+      this.sqlite.exec('DROP TABLE IF EXISTS captures;');
+      this.sqlite.exec('DROP TABLE IF EXISTS learning_patterns;');
+      this.sqlite.exec('DROP TABLE IF EXISTS contexts;');
+      this.sqlite.exec('DROP TABLE IF EXISTS preferences;');
+      this.sqlite.exec('DROP TABLE IF EXISTS config;');
+      this.sqlite.exec('DROP TABLE IF EXISTS collections;');
+
+      // Recreate everything
+      await this.setupDatabase();
+      
+      console.log('✅ Database reset completed!');
+    } catch (error) {
+      console.error('❌ Failed to reset database:', error);
+      throw error;
+    }
   }
 
   // UTILITY METHODS
