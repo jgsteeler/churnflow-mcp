@@ -1,17 +1,18 @@
-# ChurnFlow MCP Server v0.3.4
+# ChurnFlow MCP Server v0.4.0
 
-> An ADHD-friendly productivity system powered by AI agents and GitHub Copilot
+> An ADHD-friendly productivity system powered by AI agents, SQLite database, and GitHub Copilot
 
-**ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with GitHub Copilot integration and comprehensive AI assistant support, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
+**ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with optional SQLite database integration, GitHub Copilot support, and comprehensive AI assistance, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
 
-## 🎉 New in v0.3.4: Complete Review System Integration
+## 🎉 New in v0.4.0: Complete Database Integration
 
-- **🔗 Review System Integration**: CaptureEngine now properly routes low-confidence items through ReviewManager
-- **🧠 Complete ADHD Workflow**: Full capture → review → action → edit cycle now functional
-- **🤖 GitHub Copilot Ready**: Full MCP server integration with three AI tools
-- **🔧 Production Grade**: 166 comprehensive tests, robust error handling with graceful fallbacks
-- **⚡ Multi-item Capture**: Single input generates multiple routed items
-- **📐 Perfect Formatting**: Consistent ISO dates, priority emojis, section placement
+- **🗄️ SQLite Database Integration**: Optional advanced features with full-text search, analytics, and AI learning
+- **🔍 Full-Text Search (FTS5)**: Search across all captures with ranking and relevance scoring
+- **📊 Analytics Dashboard**: Track inbox, active, completed, and overdue items with real-time statistics
+- **🧠 AI Learning Patterns**: Context inference improves over time with user feedback
+- **🏗️ Clean Architecture**: Database setup separated from capture operations (resolves code smells)
+- **📁 Dual Storage**: Captures save to both markdown files AND SQLite database
+- **🔄 Optional Enhancement**: System works perfectly in file-only mode when database not set up
 
 ## 🧠 The Problem
 
@@ -72,6 +73,9 @@ npm install
 
 # Build the project
 npm run build
+
+# Setup database (optional - enables advanced features)
+npm run db:setup
 ```
 
 ### Configuration
@@ -115,6 +119,30 @@ npm run build
    - *"What's the status of my ChurnFlow system?"*
    - *"Show me my available ChurnFlow trackers"*
 
+### Database Features (Optional)
+
+Database setup enables advanced features while maintaining full file-based compatibility:
+
+```bash
+# Setup database (one-time)
+npm run db:setup
+
+# Reset database (development)
+npm run db:reset
+
+# View database (browser)
+npm run db:studio
+```
+
+**Database Features:**
+- 🔍 **Full-text search** across all captures
+- 📊 **Analytics dashboard** with statistics
+- 🧠 **AI learning** that improves over time
+- 📋 **Review prioritization** for ADHD workflows
+
+**File-Only Mode:**
+ChurnFlow works perfectly without database setup - all captures save to markdown files as usual.
+
 ### CLI Usage (Alternative)
 
 ```bash
@@ -147,9 +175,11 @@ npm run cli status
 - **ADHD-Friendly**: Clean, consistent output reduces cognitive load
 
 ### 🔧 Production Ready
-- **122 Comprehensive Tests**: Full test coverage across all components
-- **Error Handling**: Graceful fallbacks ensure no thoughts are lost
+- **176+ Comprehensive Tests**: Full test coverage across all components including database
+- **Dual Storage System**: Redundant file + database storage with graceful fallback
+- **Error Handling**: Graceful degradation ensures no thoughts are lost
 - **Emergency Capture**: Always saves input even when systems fail
+- **Clean Architecture**: Database setup separated from capture operations
 - **Multi-Item Support**: Doug welder example processes complex scenarios
 
 ## 🏢 About GSC Dev
@@ -175,17 +205,20 @@ We welcome contributions from the ADHD and neurodivergent community! Please see 
 - [x] **v0.3.2**: Complete ADHD dashboard & task management system  
 - [x] **v0.3.3**: Complete task editing and lifecycle management
 - [x] **v0.3.4**: Review system integration - complete capture → review → action workflow
+- [x] **v0.4.0**: Complete SQLite database integration with FTS, analytics, and AI learning
 
-### 🎯 In Progress  
-- [ ] **v0.3.5**: Enhanced review dashboard and batch processing tools
-- [ ] Advanced review analytics and confidence scoring improvements
-- [ ] Review workflow optimization based on user patterns
+### 🎯 Next (v0.4.1)
+- [ ] **Database CLI Commands**: Search, analytics, and review query commands
+- [ ] **MCP Database Tools**: Expose database features through GitHub Copilot
+- [ ] **Enhanced Dashboard**: Database-powered statistics and insights
+- [ ] **Search Interface**: Full-text search integration with CLI
 
-### 🚀 Future
-- [ ] **v0.3.2+**: Voice capture integration building on MCP foundation
-- [ ] Mobile app for capture on-the-go with MCP sync
-- [ ] Advanced AI features: learning from user patterns
-- [ ] Community marketplace for custom trackers and workflows
+### 🚀 Future Releases
+- [ ] **v0.4.2**: Advanced database features (collections, tagging, relationships)
+- [ ] **v0.4.3**: AI learning optimization and pattern recognition improvements
+- [ ] **v0.5.0**: Voice capture integration with database storage
+- [ ] **v0.6.0**: Mobile app for capture on-the-go with database sync
+- [ ] **v0.7.0**: Advanced AI features and community marketplace
 
 ## 📄 License
 
