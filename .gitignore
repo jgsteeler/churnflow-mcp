@@ -35,3 +35,4 @@ coverage/
 *.tmp
 *.temp
 *.db
+/src/storage/__tests__/test-*.db*

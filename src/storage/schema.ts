@@ -21,7 +21,7 @@ export const captures = sqliteTable('captures', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
   
   // Core content
-  content: text('content').notNull(),
+  content: text('text').notNull(),
   rawInput: text('raw_input'), // Original input before AI processing
   
   // Capture metadata

@@ -12,10 +12,10 @@ describe('DatabaseManager', () => {
   let testDbPath: string;
 
   beforeEach(async () => {
-    // Create a temporary database for testing
-    testDbPath = path.join(__dirname, `test-${Date.now()}.db`);
-    dbManager = new DatabaseManager({ dbPath: testDbPath });
-    await dbManager.initialize();
+  // Create a temporary database for testing
+  testDbPath = path.join(__dirname, `test-${Date.now()}.db`);
+  dbManager = new DatabaseManager({ dbPath: testDbPath });
+  await dbManager.setupDatabase();
   });
 
   afterEach(() => {

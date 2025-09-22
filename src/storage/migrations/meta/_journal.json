@@ -1,19 +1,19 @@
 {
-  "version": "7",
+  "version": "1",
   "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
       "version": "6",
-      "when": 1758338734981,
-      "tag": "0000_chunky_norman_osborn",
+      "when": 1758506112328,
+      "tag": "0000_careful_wonder_man",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1758338960846,
-      "tag": "0001_greedy_la_nuit",
+      "when": 1758506945399,
+      "tag": "0001_dizzy_ghost_rider",
       "breakpoints": true
     }
   ]

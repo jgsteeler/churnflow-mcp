@@ -1,0 +1,8 @@
+{
+  "collectionsPath": "/tmp/churn-test/Collections",
+  "trackingPath": "/tmp/churn-test/Tracking",
+  "crossrefPath": "/tmp/churn-test/Tracking/crossref.json",
+  "aiProvider": "openai",
+  "confidenceThreshold": 0.7,
+  "note": "Test config for safe database setup."
+}
