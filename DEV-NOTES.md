@@ -1,53 +1,61 @@
 # ChurnFlow Development Notes
 
-## Current Status: v0.3.0 MCP Server Integration 🚀 READY FOR RELEASE
+## Current Status: v0.4.0 SQLite Database Integration 🎉 PRODUCTION READY
 
-**Major Achievement**: Full GitHub Copilot integration with MCP server!
+**Major Achievement**: Complete database integration with clean architecture!
 
-### v0.3.0 - MCP Server Integration ✅ COMPLETE:
-- **MCP Server Implementation**: Production-ready Model Context Protocol server
-- **GitHub Copilot Ready**: Three tools available - capture, status, list_trackers
-- **AI Assistant Integration**: Any MCP-compatible AI can use ChurnFlow
-- **Backward Compatible**: All v0.2.2 functionality preserved and enhanced
-- **Production Grade**: Comprehensive error handling, configuration loading
-- **Documentation Complete**: MCP-SETUP.md with integration guides
+### v0.4.0 - Database Integration ✅ COMPLETE:
+- **SQLite Database Integration**: Full dual storage (files + database) with graceful fallback
+- **Full-Text Search (FTS5)**: Search across all captures with ranking and relevance
+- **Analytics Dashboard**: Real-time statistics for inbox, active, completed, and overdue items
+- **AI Learning Patterns**: Context inference improves over time with user feedback
+- **Clean Architecture**: Database setup completely separated from capture operations
+- **Production Commands**: `npm run db:setup`, `npm run db:reset`, `npm run db:studio`
+- **Comprehensive Testing**: 176+ tests including full database test suite
+- **Zero Breaking Changes**: Complete backwards compatibility with file-only mode
 
 ### What Works Perfectly:
-- **Formatting Consistency**: All entries use standardized FormattingUtils
-  - ✅ ISO dates (2025-09-16) and timestamps (2025-09-16 14:30)
-  - ✅ Priority indicators (🚨 ⏫ 🔼 🔻)
-  - ✅ Consistent entry templates for all types
-- **Section Placement**: Items go exactly where they should
-  - ✅ Automatic section creation with proper ordering
-  - ✅ Activities sorted chronologically (oldest first)
-  - ✅ Proper spacing (1 line before/after headers, no gaps between items)
-- **Comprehensive test suite**: 122 tests across 6 suites ✅
-- **Multi-item capture**: Doug welder example still works with new formatting
-- **ADHD-friendly**: Brain dumps with consistent, clean output
+- **Database Integration**: Dual storage system with SQLite
+  - ✅ Optional setup: Works in file-only mode when database not configured
+  - ✅ Full-text search (FTS5) with proper triggers and indexing
+  - ✅ Context-aware storage with relationship tracking
+  - ✅ AI learning patterns for improved inference over time
+  - ✅ Analytics dashboard with real-time statistics
+- **Clean Architecture**: Database operations properly separated
+  - ✅ Setup commands: `npm run db:setup` and `npm run db:reset`
+  - ✅ Capture operations never create tables (code smell resolved)
+  - ✅ Graceful degradation when database unavailable
+  - ✅ Non-blocking database saves don't affect file operations
+- **Comprehensive test suite**: 176+ tests across 7 suites ✅
+- **Production Ready**: All existing features preserved and enhanced
+  - ✅ Formatting consistency with FormattingUtils
+  - ✅ Section placement and multi-item capture
+  - ✅ MCP server integration and GitHub Copilot support
+  - ✅ ADHD-friendly workflows with zero breaking changes
 
 ---
 
-## Next Version: v0.3.1 - Review Process System 🎯
+## Next Version: v0.4.1 - Database CLI Integration 🎯
 
-**Focus: Follow-up Assurance over Perfect Routing**
+**Focus: Expose Database Power Through User Interface**
 
-Pragmatic approach: Ensure items get human attention rather than perfect AI placement.
-Key insight: If action items get done, activity logs get reviewed before sync, and refs/reviews land somewhere appropriate, exact tracker placement is less critical.
+Now that the database foundation is solid, make the advanced features accessible through CLI commands and MCP tools.
 
 ### Core Requirements:
-1. **Surface low-confidence items** that weren't routed immediately
-2. **Dashboard indicators** for items needing review
-3. **Quick validation interface** for ALL items (even 95% confident AI routing)
-4. **Easy corrections**: tracker switching, priority changes, tag management, type conversion
-5. **Universal review command** for comprehensive item management
-6. **MCP Integration**: Review tools available to AI assistants
+1. **Database CLI Commands**: Search, analytics, and review queries from command line
+2. **MCP Database Tools**: Expose database features through GitHub Copilot integration
+3. **Enhanced Dashboard**: Database-powered statistics and insights
+4. **Search Interface**: Full-text search integration with CLI
+5. **Review Queries**: Database-backed review prioritization accessible via commands
+6. **Analytics Commands**: Real-time statistics and progress tracking
 
-### Implementation Plan: docs/v0.3.1-PLAN.md (renamed from v0.2.3-PLAN.md)
-- Two-tier system: auto-placed with review flags + review queue for low confidence
-- CLI commands for quick edits: move, priority, tags, type conversion
-- Dashboard integration with review indicators
-- MCP server tools for AI assistant review workflows
-- Focus on workflow completion rather than routing perfection
+### Implementation Plan: docs/v0.4.1-PLAN.md
+- CLI commands: `search`, `stats`, `review-db`, `analytics`
+- MCP tools: `search_captures`, `get_analytics`, `get_review_items`
+- Database-powered dashboard with live statistics
+- Full-text search with ranking and filtering
+- AI learning pattern analysis and insights
+- Integration with existing review system
 
 ---
 
@@ -114,26 +122,39 @@ Key insight: If action items get done, activity logs get reviewed before sync, a
 ## Development Environment Notes
 
 ### Current Setup:
-- ✅ ChurnFlow v0.3.0 with MCP server integration
+- ✅ ChurnFlow v0.4.0 with complete database integration
+- ✅ SQLite database with FTS5 full-text search
 - ✅ GitHub Copilot ready with full AI assistant support
-- ✅ 15 active trackers loaded
+- ✅ 16 active trackers loaded with database context mapping
 - ✅ Shell alias `churn capture "..."` working globally
 - ✅ MCP server: `npm run mcp` for AI assistant integration
-- ✅ Comprehensive test coverage: 122 tests across 6 suites
-- ✅ Git-flow workflow established
+- ✅ Database commands: `db:setup`, `db:reset`, `db:studio`
+- ✅ Comprehensive test coverage: 176+ tests across 7 suites
+- ✅ Git-flow workflow with feature branch `database-integration-0.4.x`
 
 ### Testing Commands:
 ```bash
-# Test multi-item capture (CLI)
-churn capture "Complex scenario with multiple actionable items"
+# Setup database (one-time)
+npm run db:setup
 
-# Check system status (CLI)
-churn status
+# Test capture with database integration
+npm run cli capture "Database working perfectly with dual storage"
+
+# View database in browser
+npm run db:studio
+
+# Test file-only mode (rename database)
+mv churnflow.db churnflow.db.backup
+npm run cli capture "File-only mode test"
+mv churnflow.db.backup churnflow.db
+
+# Check system status
+npm run cli status
 
 # Start MCP server for AI assistants
 npm run mcp
 
-# Run comprehensive tests
+# Run comprehensive tests (including database)
 npm test
 
 # Build for production
@@ -150,13 +171,18 @@ Use ChurnFlow CLI during your weekly collection review to:
 ---
 
 ## Version History Summary:
-1. ✅ **v0.2.1 Complete**: Multi-item capture pushed to repository
-2. ✅ **v0.2.2 Complete**: Formatting consistency with 122 comprehensive tests
+1. ✅ **v0.2.1 Complete**: Multi-item capture with cross-tracker routing
+2. ✅ **v0.2.2 Complete**: Formatting consistency with perfect section placement
 3. ✅ **v0.3.0 Complete**: MCP server integration, GitHub Copilot ready
-4. 🎯 **v0.3.1 Planned**: Review Process system for comprehensive item management
-5. 📋 **Future**: Voice capture, AI assistant enhancements, mobile support
+4. ✅ **v0.3.1 Complete**: Review Process system foundation
+5. ✅ **v0.3.2 Complete**: ADHD dashboard & task management system
+6. ✅ **v0.3.3 Complete**: Task editing and lifecycle management
+7. ✅ **v0.3.4 Complete**: Review system integration workflow
+8. ✅ **v0.4.0 Complete**: SQLite database integration with FTS, analytics, AI learning
+9. 🎯 **v0.4.1 Planned**: Database CLI commands and MCP tool integration
+10. 📋 **Future**: Voice capture, mobile app, advanced AI features
 
 ---
 
-*Notes last updated: 2025-09-16 13:28*  
-*Status: Ready for v0.3.0 release and GitHub Copilot integration*
+*Notes last updated: 2025-09-21 23:50*  
+*Status: v0.4.0 production ready - complete database integration with clean architecture*
