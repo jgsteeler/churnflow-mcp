@@ -7,6 +7,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-09-21
+
+### 🎉 Major Features Added
+
+#### SQLite Database Integration
+- **Full database integration** alongside existing file-based workflow
+- **Dual storage system**: Captures save to both markdown files AND SQLite database
+- **Optional database**: System works perfectly in file-only mode when database not set up
+- **Proper architecture**: Database setup separated from capture operations
+
+#### Database Features
+- **Full-text search (FTS5)**: Search across all captures with ranking and relevance scoring
+- **Analytics dashboard**: Track inbox, active, completed, and overdue items with real-time statistics
+- **AI learning patterns**: Context inference improves over time with user feedback and pattern recognition
+- **ADHD-friendly review system**: Intelligent prioritization of items needing review based on multiple factors
+- **Context management**: Auto-create and manage contexts from tracker usage patterns
+
+#### Database Commands
+- `npm run db:setup` - Initial database setup with schema, indexes, and seed data
+- `npm run db:reset` - Reset database (deletes all data and recreates tables)
+- `npm run db:studio` - Open Drizzle Studio database browser for visual exploration
+- `npm run db:generate` - Generate database migrations from schema changes
+
+### 🔧 Technical Improvements
+
+#### Architecture
+- **Clean separation of concerns**: Database setup operations completely separated from capture business logic
+- **Non-blocking database**: Capture operations succeed even if database operations fail
+- **Graceful degradation**: Clear messaging and fallback when database unavailable
+- **Proper error handling**: Database errors don't break existing file-based workflow
+
+#### Database Schema
+- **ISO date strings**: Consistent timestamp handling throughout (no more Unix timestamps)
+- **Proper typing**: Full TypeScript integration with Drizzle ORM and type-safe queries
+- **FTS integration**: Fixed trigger and column naming issues that caused SQLite datatype mismatches
+- **Context-aware storage**: Captures properly linked to inferred contexts with relationship tables
+- **Learning patterns**: AI improvement data stored for better context inference over time
+
+#### Testing
+- **Comprehensive test suite**: 10 new database tests covering all CRUD operations
+- **Test isolation**: Temporary databases for each test with automatic cleanup
+- **End-to-end testing**: Verified complete capture flow with dual storage system
+- **Jest integration**: All tests passing with proper ESM configuration
+
+### 🐛 Bug Fixes
+
+#### Database Issues Resolved
+- **SQLite datatype mismatch**: Fixed FTS table column naming conflicts (contextTags vs context_tags)
+- **Timestamp handling**: Consistent ISO date strings instead of problematic Unix timestamps
+- **Schema conflicts**: Resolved trigger and virtual table issues that prevented inserts
+- **Type safety**: Fixed TypeScript integration with Drizzle queries and proper return types
+- **FTS triggers**: Fixed rowid issues and column mapping in full-text search triggers
+
+#### Capture Flow Improvements
+- **Emergency fallback**: Better error handling in capture failure scenarios with graceful degradation
+- **Database availability**: System properly detects and handles missing database setup
+- **File operation reliability**: Improved tracker writing with better error messages and validation
+
+### 📋 User Experience
+
+#### Improved Workflow
+- **Clear setup process**: Explicit `npm run db:setup` for database features (one-time operation)
+- **Helpful error messages**: "Database not set up. Run: npm run db:setup" with clear guidance
+- **Optional features**: Database features enhance but don't replace existing file workflow
+- **Backwards compatibility**: Existing file-based workflow completely unchanged
+
+#### Enhanced Capture Experience
+- **Dual confirmation**: Clear indication when items saved to both files and database
+- **Database feedback**: Success/failure messaging for database operations
+- **File-first approach**: File operations remain primary, database provides enhancement features
+- **Non-blocking saves**: Database failures don't prevent successful file captures
+
+### 📚 Documentation
+
+#### New Documentation
+- **DATABASE.md**: Comprehensive 118-line database setup and usage guide
+- **Architecture diagrams**: Clear explanation of dual storage system and data flow
+- **Troubleshooting guide**: Common issues, error messages, and step-by-step solutions
+- **Development workflow**: Instructions for schema changes, testing, and maintenance
+
+#### Improved Help
+- **CLI help messages**: Better guidance for database setup and usage commands
+- **Setup instructions**: Clear step-by-step database setup process for new users
+- **Feature documentation**: Detailed explanation of what database features enable
+- **Migration guide**: Instructions for existing users to adopt database features
+
+### ⚠️ Breaking Changes
+None. This release is fully backwards compatible. All existing file-based workflows continue to work without any modification required.
+
+### 🔄 Migration Guide
+
+#### For New Users
+1. Clone repository: `git clone <repo>`
+2. Install dependencies: `npm install`
+3. Setup database: `npm run db:setup` (optional, enables advanced features)
+4. Start capturing: `npm run cli capture "your thoughts"`
+
+#### For Existing Users
+1. Pull latest changes: `git pull`
+2. Update dependencies: `npm install`
+3. Setup database: `npm run db:setup` (optional, to enable new database features)
+4. Continue using existing workflow - nothing changes in your daily usage!
+
+### 📊 Statistics
+- **Files added**: 15+ new files for complete database integration
+- **Tests added**: 10 comprehensive database tests with full coverage
+- **Architecture**: Clean separation of setup vs operations (major code smell resolved)
+- **Performance**: Non-blocking database operations with graceful fallback
+- **Reliability**: File system workflow remains 100% functional without database
+- **Code quality**: Zero breaking changes, full backwards compatibility maintained
+
+### 🏆 Key Achievement
+**Production-Ready Database Integration** - ChurnFlow now provides optional advanced database features (search, analytics, AI learning) while maintaining 100% compatibility with existing markdown-based workflows. The clean architecture separates database setup from capture operations, resolving code smells and providing a solid foundation for future advanced features.
+
 ## [0.3.4] - 2025-09-17
 
 ### 🎯 CRITICAL INTEGRATION: Complete Review System Workflow
