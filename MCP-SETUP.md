@@ -1,37 +1,43 @@
-# ChurnFlow MCP Server Setup
+# ChurnFlow MCP Server Setup (v0.4.1)
 
 This guide shows how to configure ChurnFlow as an MCP (Model Context Protocol) server for use with GitHub Copilot and other AI assistants.
 
 ## Quick Start
 
 1. **Build the project**:
+
    ```bash
    npm run build
    ```
 
 2. **Start the MCP server**:
+
    ```bash
    npm run mcp
    ```
 
 3. **Or run directly with tsx**:
+
    ```bash
    tsx src/index.ts
    ```
 
-## Available Tools
+## Available Tools (v0.4.1)
 
 The ChurnFlow MCP server provides three tools for AI assistants:
 
 ### 1. `capture`
+
 Capture and route text using ChurnFlow's ADHD-friendly AI system.
 
 **Parameters**:
+
 - `text` (required): Text to capture and route (can contain multiple items)
 - `priority` (optional): Priority level (`high`, `medium`, `low`)
 - `context` (optional): Context hint for routing (`business`, `personal`, `project`, `system`)
 
 **Example**:
+
 ```json
 {
   "text": "Schedule client meeting about the proposal and update project documentation",
@@ -41,6 +47,7 @@ Capture and route text using ChurnFlow's ADHD-friendly AI system.
 ```
 
 ### 2. `status`
+
 Get ChurnFlow system status and tracker information.
 
 **Parameters**: None
@@ -48,9 +55,29 @@ Get ChurnFlow system status and tracker information.
 **Returns**: System initialization status, tracker counts, AI provider info, confidence threshold, collections path.
 
 ### 3. `list_trackers`
+
+### 4. `search_captures` (NEW in v0.4.1)
+
+Search database for captures using full-text search.
+
+**Parameters**:
+
+- `query` (required): Search string
+- `context` (optional): Context filter
+
+**Returns**: List of matching captures with metadata.
+
+### 5. `get_analytics` (NEW in v0.4.1)
+
+Get real-time statistics and analytics from the database.
+
+**Parameters**: None
+
+**Returns**: Dashboard statistics, counts, and trends.
 List available trackers with their context types and status.
 
 **Parameters**:
+
 - `context` (optional): Filter by context type (`business`, `personal`, `project`, `system`)
 
 **Returns**: List of available trackers with their metadata.
@@ -59,7 +86,7 @@ List available trackers with their context types and status.
 
 To use ChurnFlow with GitHub Copilot, you'll need to configure it as an MCP server in your settings.
 
-### For VS Code:
+### For VS Code
 
 1. Create or update your MCP configuration file (typically `~/.config/mcp/servers.json`):
 
@@ -160,6 +187,7 @@ npm run mcp 2> mcp-server.log
 ## Architecture
 
 The MCP server:
+
 - Uses `@modelcontextprotocol/sdk` for MCP protocol handling
 - Integrates with existing `CaptureEngine` for processing
 - Leverages `FormattingUtils` for consistent output

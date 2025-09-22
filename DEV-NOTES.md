@@ -1,10 +1,11 @@
 # ChurnFlow Development Notes
 
-## Current Status: v0.4.0 SQLite Database Integration 🎉 PRODUCTION READY
+## Current Status: v0.4.1 Database CLI Integration 🎉 PRODUCTION READY
 
 **Major Achievement**: Complete database integration with clean architecture!
 
-### v0.4.0 - Database Integration ✅ COMPLETE:
+### v0.4.1 - Database CLI Integration ✅ COMPLETE
+
 - **SQLite Database Integration**: Full dual storage (files + database) with graceful fallback
 - **Full-Text Search (FTS5)**: Search across all captures with ranking and relevance
 - **Analytics Dashboard**: Real-time statistics for inbox, active, completed, and overdue items
@@ -14,7 +15,8 @@
 - **Comprehensive Testing**: 176+ tests including full database test suite
 - **Zero Breaking Changes**: Complete backwards compatibility with file-only mode
 
-### What Works Perfectly:
+### What Works Perfectly
+
 - **Database Integration**: Dual storage system with SQLite
   - ✅ Optional setup: Works in file-only mode when database not configured
   - ✅ Full-text search (FTS5) with proper triggers and indexing
@@ -35,27 +37,17 @@
 
 ---
 
-## Next Version: v0.4.1 - Database CLI Integration 🎯
+### Next Version: v0.4.2 - Advanced Database Features �
 
-**Focus: Expose Database Power Through User Interface**
+**Focus: Collections, Tagging, Relationships, and AI Learning Optimization**
 
-Now that the database foundation is solid, make the advanced features accessible through CLI commands and MCP tools.
+Planned features:
 
-### Core Requirements:
-1. **Database CLI Commands**: Search, analytics, and review queries from command line
-2. **MCP Database Tools**: Expose database features through GitHub Copilot integration
-3. **Enhanced Dashboard**: Database-powered statistics and insights
-4. **Search Interface**: Full-text search integration with CLI
-5. **Review Queries**: Database-backed review prioritization accessible via commands
-6. **Analytics Commands**: Real-time statistics and progress tracking
-
-### Implementation Plan: docs/v0.4.1-PLAN.md
-- CLI commands: `search`, `stats`, `review-db`, `analytics`
-- MCP tools: `search_captures`, `get_analytics`, `get_review_items`
-- Database-powered dashboard with live statistics
-- Full-text search with ranking and filtering
-- AI learning pattern analysis and insights
-- Integration with existing review system
+1. **Advanced database features**: collections, tagging, relationships
+2. **AI learning optimization and pattern recognition improvements**
+3. **Voice capture integration with database storage**
+4. **Mobile app for capture on-the-go with database sync**
+5. **Advanced AI features and community marketplace**
 
 ---
 
@@ -64,6 +56,7 @@ Now that the database foundation is solid, make the advanced features accessible
 ### 🎯 Goal Achieved: Complete formatting standardization with perfect section placement
 
 **Issues RESOLVED:**
+
 - ✅ Standardized date formats: `2025-09-16` and `2025-09-16 14:30`
 - ✅ Consistent checkbox styles and entry prefixes
 - ✅ Proper section headers with spacing rules
@@ -71,20 +64,23 @@ Now that the database foundation is solid, make the advanced features accessible
 - ✅ Items placed directly under correct section headers
 - ✅ Automatic section creation with proper ordering
 
-### 📋 Formatting Standards IMPLEMENTED:
+### 📋 Formatting Standards IMPLEMENTED
 
 **FormattingUtils Class:** 52 comprehensive tests ✅
+
 - ISO date/timestamp formats
 - Priority indicators (🚨 ⏫ 🔼 🔻)
 - Entry templates for all types
 - Validation and standardization methods
 
 **Section Placement:** 12 comprehensive tests ✅  
+
 - Proper blank line spacing (1 before/after headers, none between items)
 - Standard section ordering: Activity Log → Action Items → Review → References → Someday → Notes
 - Mixed content handling and edge cases
 
-### 🔧 Implementation COMPLETED:
+### 🔧 Implementation COMPLETED
+
 1. ✅ **FormattingUtils constants** with comprehensive standards
 2. ✅ **InferenceEngine updated** to use FormattingUtils for consistent output
 3. ✅ **TrackerManager enhanced** with section placement and validation
@@ -98,20 +94,24 @@ Now that the database foundation is solid, make the advanced features accessible
 ## v0.3.2+ Future Roadmap
 
 ### Voice Capture System
+
 **Deferred to v0.3.2** - Will build on solid review foundation and MCP integration
 **Benefits:**
+
 - Ultimate ADHD-friendly interface
 - Hands-free capture while working
 - Natural speech-to-multi-item processing
 - Mobile accessibility
 
 **Integration with Review Process:**
+
 - Voice captures can go straight to review queue
 - Lower confidence threshold for speech input
 - Audio transcription confidence scoring
 - Review process handles ambiguous voice input
 
-### Other Future Enhancements:
+### Other Future Enhancements
+
 - Machine learning from review decisions
 - Integration with calendar/scheduling
 - Mobile-friendly review interface
@@ -121,7 +121,8 @@ Now that the database foundation is solid, make the advanced features accessible
 
 ## Development Environment Notes
 
-### Current Setup:
+### Current Setup
+
 - ✅ ChurnFlow v0.4.0 with complete database integration
 - ✅ SQLite database with FTS5 full-text search
 - ✅ GitHub Copilot ready with full AI assistant support
@@ -132,7 +133,8 @@ Now that the database foundation is solid, make the advanced features accessible
 - ✅ Comprehensive test coverage: 176+ tests across 7 suites
 - ✅ Git-flow workflow with feature branch `database-integration-0.4.x`
 
-### Testing Commands:
+### Testing Commands
+
 ```bash
 # Setup database (one-time)
 npm run db:setup
@@ -161,8 +163,10 @@ npm test
 npm run build && node dist/index.js
 ```
 
-### Weekly Review Workflow Test:
+### Weekly Review Workflow Test
+
 Use ChurnFlow CLI during your weekly collection review to:
+
 1. Test real-world capture scenarios
 2. Identify formatting inconsistencies  
 3. Document edge cases for v0.2.2
@@ -170,7 +174,8 @@ Use ChurnFlow CLI during your weekly collection review to:
 
 ---
 
-## Version History Summary:
+## Version History Summary
+
 1. ✅ **v0.2.1 Complete**: Multi-item capture with cross-tracker routing
 2. ✅ **v0.2.2 Complete**: Formatting consistency with perfect section placement
 3. ✅ **v0.3.0 Complete**: MCP server integration, GitHub Copilot ready

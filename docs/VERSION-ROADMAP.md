@@ -1,6 +1,6 @@
 # ChurnFlow MCP Version Roadmap
 
-## Current Status: v0.4.0 Database Integration Complete 🎉
+## Current Status: v0.4.1 Database CLI Integration & MCP Tools 🎉
 
 **All completed versions documented in CHANGELOG.md**
 
@@ -22,25 +22,27 @@
 
 ---
 
-### **v0.4.2** - Database Migrations System
+### **v0.4.2** - Advanced Database Features & Migrations
 
-**Type**: MINOR (new migration infrastructure, backward compatible)  
-**Scope**: Proper database schema evolution without data loss
+**Type**: MINOR (new migration infrastructure, advanced features, backward compatible)
+**Scope**: Database schema evolution, collections, tagging, relationships
 
 **Features**:
 
-- 🔄 **Drizzle Migrations**: Proper migration workflow like Entity Framework Core
-- 🔄 **Schema Evolution**: Add columns and modify tables without losing data
+- 🔄 **Drizzle Migrations**: Proper migration workflow for safe schema evolution
+- 🗂️ **Collections & Tagging**: Add support for collections, tags, and relationships
 - 🔄 **Migration Commands**: `npm run db:generate`, `npm run db:migrate` workflows
 - 🔄 **Version Tracking**: Database schema versioning and rollback support
 - 🔄 **Data Safety**: Ensure no data loss during schema changes
+- 🏷️ **Context Relationships**: Link captures to contexts and trackers
 - 🔄 **Development Workflow**: Easy schema iteration during development
 
 **Implementation**:
 
 - Update DatabaseManager to use proper migrations instead of manual table creation
 - Establish migration workflow for future schema changes
-- Ensure existing v0.4.0 databases can migrate forward safely
+- Add collections, tags, and relationships to schema
+- Ensure existing v0.4.1 databases can migrate forward safely
 
 ---
 
