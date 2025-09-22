@@ -7,7 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.1] - 2025-09-21
+## [0.4.2] - 2025-09-21
+
+### 🎉 Major Features Added
+
+#### Advanced Database Features & Migrations
+
+- **Drizzle Migrations**: Proper migration workflow for safe schema evolution
+- **Collections & Tagging**: Add support for collections, tags, and relationships
+- **Migration Commands**: `npm run db:generate`, `npm run db:migrate` workflows
+- **Version Tracking**: Database schema versioning and rollback support
+- **Data Safety**: Ensure no data loss during schema changes
+- **Context Relationships**: Link captures to contexts and trackers
+- **Development Workflow**: Easy schema iteration during development
+
+### 🛠 Technical Improvements
+
+- Update DatabaseManager to use proper migrations instead of manual table creation
+- Establish migration workflow for future schema changes
+- Add collections, tags, and relationships to schema
+- Ensure existing v0.4.1 databases can migrate forward safely
+
+### 🐞 Bug Fixes
+
+- Minor fixes and improvements for database migration and schema evolution
+
+### 📚 Documentation
+
+- Updated README, DEV-NOTES, and MCP-SETUP for v0.4.2 features
+
+### ⚠️ Breaking Changes
+
+None. This release is fully backwards compatible.
+
+---
 
 ### 🎉 Major Features Added
 

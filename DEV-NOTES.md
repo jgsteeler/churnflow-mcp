@@ -1,10 +1,10 @@
 # ChurnFlow Development Notes
 
-## Current Status: v0.4.1 Database CLI Integration 🎉 PRODUCTION READY
+## Current Status: v0.4.2 Advanced Database Features & Migrations 🎉 PRODUCTION READY
 
 **Major Achievement**: Complete database integration with clean architecture!
 
-### v0.4.1 - Database CLI Integration ✅ COMPLETE
+### v0.4.2 - Advanced Database Features & Migrations ✅ COMPLETE
 
 - **SQLite Database Integration**: Full dual storage (files + database) with graceful fallback
 - **Full-Text Search (FTS5)**: Search across all captures with ranking and relevance
@@ -37,17 +37,17 @@
 
 ---
 
-### Next Version: v0.4.2 - Advanced Database Features �
+### Next Version: v0.4.3 - Capture Input Refinements 🏁
 
-**Focus: Collections, Tagging, Relationships, and AI Learning Optimization**
+**Focus: Enhanced AI processing, multi-item capture, and edge case handling**
 
 Planned features:
 
-1. **Advanced database features**: collections, tagging, relationships
-2. **AI learning optimization and pattern recognition improvements**
-3. **Voice capture integration with database storage**
-4. **Mobile app for capture on-the-go with database sync**
-5. **Advanced AI features and community marketplace**
+1. **Capture input refinements**: Enhanced AI processing and edge cases
+2. **Priority detection**: Improved priority inference from natural language
+3. **Multi-item enhancement**: Improved multi-item capture from complex inputs
+4. **Edge case handling**: Better handling of ambiguous or unusual inputs
+5. **Confidence scoring**: Refined confidence algorithms for routing decisions
 
 ---
 

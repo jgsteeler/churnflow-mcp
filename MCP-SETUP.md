@@ -1,4 +1,4 @@
-# ChurnFlow MCP Server Setup (v0.4.1)
+# ChurnFlow MCP Server Setup (v0.4.2)
 
 This guide shows how to configure ChurnFlow as an MCP (Model Context Protocol) server for use with GitHub Copilot and other AI assistants.
 
@@ -22,7 +22,7 @@ This guide shows how to configure ChurnFlow as an MCP (Model Context Protocol) s
    tsx src/index.ts
    ```
 
-## Available Tools (v0.4.1)
+## Available Tools (v0.4.2)
 
 The ChurnFlow MCP server provides three tools for AI assistants:
 
@@ -56,7 +56,7 @@ Get ChurnFlow system status and tracker information.
 
 ### 3. `list_trackers`
 
-### 4. `search_captures` (NEW in v0.4.1)
+### 4. `search_captures` (NEW in v0.4.2)
 
 Search database for captures using full-text search.
 
@@ -67,7 +67,7 @@ Search database for captures using full-text search.
 
 **Returns**: List of matching captures with metadata.
 
-### 5. `get_analytics` (NEW in v0.4.1)
+### 5. `get_analytics` (NEW in v0.4.2)
 
 Get real-time statistics and analytics from the database.
 

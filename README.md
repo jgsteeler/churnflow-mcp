@@ -1,10 +1,10 @@
-# ChurnFlow MCP Server v0.4.1
+# ChurnFlow MCP Server v0.4.2
 
 > An ADHD-friendly productivity system powered by AI agents, SQLite database, and GitHub Copilot
 
 **ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with optional SQLite database integration, GitHub Copilot support, and comprehensive AI assistance, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
 
-## 🎉 New in v0.4.1: Database CLI Integration & MCP Tools
+## 🎉 New in v0.4.2: Advanced Database Features & Migrations
 
 **v0.4.1 Highlights:**
 
@@ -232,21 +232,16 @@ We welcome contributions from the ADHD and neurodivergent community! Please see 
 - [x] **v0.3.4**: Review system integration - complete capture → review → action workflow
 - [x] **v0.4.0**: Complete SQLite database integration with FTS, analytics, and AI learning
 
-### 🏁 Next (v0.4.2)
+### 🏁 Next (v0.4.3)
 
-- [ ] **Advanced database features**: collections, tagging, relationships, context linking
-- [ ] **Drizzle migrations**: Safe schema evolution and versioning
-- [ ] **Migration commands**: `npm run db:generate`, `npm run db:migrate`
-- [ ] **Data safety**: No data loss during schema changes
-- [ ] **Context relationships**: Link captures to contexts and trackers
-- [ ] **AI learning optimization and pattern recognition improvements**
-- [ ] **Voice capture integration with database storage**
-- [ ] **Mobile app for capture on-the-go with database sync**
-- [ ] **Advanced AI features and community marketplace**
+- [ ] **Capture input refinements**: Enhanced AI processing and edge cases
+- [ ] **Priority detection**: Improved priority inference from natural language
+- [ ] **Multi-item enhancement**: Improved multi-item capture from complex inputs
+- [ ] **Edge case handling**: Better handling of ambiguous or unusual inputs
+- [ ] **Confidence scoring**: Refined confidence algorithms for routing decisions
 
 ### 🚀 Future Releases
 
-- [ ] **v0.4.3**: Capture input refinements, enhanced AI processing and edge cases
 - [ ] **v0.4.4**: Context-aware dashboard views with database backing
 - [ ] **v0.4.5**: Inferred due dates with AI learning patterns
 - [ ] **v0.4.6**: Enhanced MCP server with database-powered tools

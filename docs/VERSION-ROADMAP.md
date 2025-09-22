@@ -1,28 +1,14 @@
 # ChurnFlow MCP Version Roadmap
 
-## Current Status: v0.4.1 Database CLI Integration & MCP Tools 🎉
+## Current Status: v0.4.2 Advanced Database Features & Migrations 🎉
 
-**All completed versions documented in CHANGELOG.md**
+*All completed versions documented in CHANGELOG.md*
 
 ---
 
 ## 📋 **Future Version Roadmap** *(Undone v0.3.x Features Migrated)*
 
-### **v0.4.1** - MVP Refinements *(Current Feature Branch)*
-
-**Type**: PATCH (bug fixes and small improvements)  
-**Scope**: Fix issues discovered during v0.4.0 usage
-
-**Issues to Address**:
-
-- 🐛 Fix priority indicators appearing on activity log entries (should be activity-only)
-- 🐛 Other refinements discovered during MVP usage
-- 🔧 Small capture flow improvements
-- 📋 Review and polish database integration edge cases
-
----
-
-### **v0.4.2** - Advanced Database Features & Migrations
+### **v0.4.2** - Advanced Database Features & Migrations *(Current Feature Branch)*
 
 **Type**: MINOR (new migration infrastructure, advanced features, backward compatible)
 **Scope**: Database schema evolution, collections, tagging, relationships
@@ -46,7 +32,7 @@
 
 ---
 
-### **v0.4.3** - Capture Input Refinements
+### **v0.4.3** - Capture Input Refinements *(Next Feature)*
 
 **Type**: MINOR (enhanced capture processing)  
 **Scope**: Improve capture quality and AI inference
