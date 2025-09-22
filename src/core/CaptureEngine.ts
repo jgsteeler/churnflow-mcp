@@ -7,6 +7,7 @@ import { TrackerManager } from './TrackerManager.js';
 import { InferenceEngine } from './InferenceEngine.js';
 import { ReviewManager } from './ReviewManager.js';
 import { FormattingUtils } from '../utils/FormattingUtils.js';
+import { DatabaseManager } from '../storage/DatabaseManager.js';
 
 /**
  * Main capture engine for ChurnFlow
@@ -21,12 +22,15 @@ export class CaptureEngine {
   private trackerManager: TrackerManager;
   private inferenceEngine: InferenceEngine;
   private reviewManager: ReviewManager;
+  private databaseManager: DatabaseManager;
+  private databaseAvailable = false;
   private initialized = false;
 
   constructor(private config: ChurnConfig) {
     this.trackerManager = new TrackerManager(config);
     this.inferenceEngine = new InferenceEngine(config, this.trackerManager);
     this.reviewManager = new ReviewManager(config, this.trackerManager);
+    this.databaseManager = new DatabaseManager(); // Use default SQLite database
   }
 
   /**
@@ -39,6 +43,17 @@ export class CaptureEngine {
 
     try {
       await this.trackerManager.initialize();
+      
+      // Initialize database (non-blocking - capture still works if DB fails)
+      try {
+        await this.databaseManager.initialize();
+        this.databaseAvailable = true;
+        console.log("✅ Database ready for capture storage!");
+      } catch (dbError) {
+        this.databaseAvailable = false;
+        console.warn("⚠️ Database not available - using file-only mode. Run 'npm run db:setup' to enable database features.");
+      }
+      
       this.initialized = true;
       console.log("✅ ChurnFlow ready for ADHD-friendly capture!");
     } catch (error) {
@@ -141,6 +156,15 @@ export class CaptureEngine {
 
       // Determine overall success
       const overallSuccess = itemResults.some((result) => result.success);
+      
+      // Save to database if available (optional - doesn't affect capture success)
+      if (overallSuccess && this.databaseAvailable) {
+        try {
+          await this.saveCaptureToDatabase(captureInput, inference, itemResults, overallSuccess);
+        } catch (dbError) {
+          console.warn("⚠️ Failed to save to database (file saved successfully):", dbError);
+        }
+      }
 
       return {
         success: overallSuccess,
@@ -156,6 +180,67 @@ export class CaptureEngine {
       // Emergency fallback - try to save somewhere
       return await this.emergencyCapture(captureInput, error as Error);
     }
+  }
+
+  /**
+   * Save capture to database (non-blocking)
+   */
+  private async saveCaptureToDatabase(
+    input: CaptureInput,
+    inference: any,
+    itemResults: any[],
+    success: boolean
+  ): Promise<void> {
+    // Find or create context
+    let contextId: string | null = null;
+    if (inference.primaryTracker) {
+      const existingContext = await this.databaseManager.getContextByName(inference.primaryTracker);
+      if (existingContext) {
+        contextId = existingContext.id;
+      } else {
+        // Create context from tracker info
+        const newContext = await this.databaseManager.createContext({
+          name: inference.primaryTracker,
+          displayName: inference.primaryTracker.charAt(0).toUpperCase() + inference.primaryTracker.slice(1),
+          description: `Auto-created from ${inference.primaryTracker} tracker`,
+          keywords: JSON.stringify([]),
+          patterns: JSON.stringify([]),
+        });
+        contextId = newContext.id;
+      }
+    }
+
+    // Save each generated item as a capture
+    for (const item of inference.generatedItems) {
+      const capture = {
+        content: item.content,
+        rawInput: input.text,
+        captureType: item.itemType as 'action' | 'reference' | 'someday' | 'activity',
+        priority: item.priority as 'critical' | 'high' | 'medium' | 'low',
+        status: 'inbox' as const,
+        contextId,
+        confidence: inference.confidence,
+        aiReasoning: item.reasoning,
+        tags: JSON.stringify([inference.primaryTracker]),
+        contextTags: JSON.stringify([]),
+        keywords: JSON.stringify(this.inferenceEngine.extractKeywords(input.text)),
+        captureSource: input.inputType === 'voice' ? 'voice' as const : 'manual' as const,
+      };
+
+      await this.databaseManager.createCapture(capture);
+      console.log(`💾 Saved to database: ${item.itemType} in ${inference.primaryTracker}`);
+    }
+
+    // Record learning pattern for AI improvement
+    await this.databaseManager.recordLearningPattern({
+      inputKeywords: JSON.stringify(this.inferenceEngine.extractKeywords(input.text)),
+      inputLength: input.text.length,
+      inputPatterns: JSON.stringify([]),
+      chosenContextId: contextId,
+      chosenType: inference.generatedItems[0]?.itemType || 'action',
+      originalConfidence: inference.confidence,
+      wasCorrect: null, // Will be updated if user provides feedback
+    });
   }
 
   /**
