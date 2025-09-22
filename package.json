@@ -14,12 +14,13 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
-    "db:setup": "tsx src/cli/db-setup.ts",
-    "db:reset": "tsx src/cli/db-setup.ts --reset",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "db:push": "drizzle-kit push"
+  "db:setup": "npm run db:migrate && npm run db:seed",
+  "db:reset": "rm -f churnflow.db && npm run db:setup",
+  "db:generate": "drizzle-kit generate",
+  "db:migrate": "drizzle-kit migrate",
+  "db:seed": "sqlite3 churnflow.db < src/storage/migrations/0001_seed_initial_data.sql",
+  "db:studio": "drizzle-kit studio",
+  "db:push": "drizzle-kit push"
   },
   "keywords": [
     "mcp",

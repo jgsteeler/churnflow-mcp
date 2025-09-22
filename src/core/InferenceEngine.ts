@@ -367,7 +367,7 @@ Remember: This is for someone with ADHD - prioritize quick, accurate routing ove
     }
 
     // Action items get extra scrutiny
-    if (itemType === "action" && confidence < 0.8) {
+    if (itemType === "action" && confidence <= 0.8) {
       return true;
     }
 

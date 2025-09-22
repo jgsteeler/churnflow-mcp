@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "50c7f13d-3391-4b02-bb13-a87f3415145f",
+  "id": "7f08e357-0d95-48bc-b18b-96f203be70a1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "capture_collections": {
@@ -45,7 +45,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -153,8 +153,24 @@
           "notNull": false,
           "autoincrement": false
         },
-        "json": {
-          "name": "json",
+        "tags": {
+          "name": "tags",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "context_tags": {
+          "name": "context_tags",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "keywords": {
+          "name": "keywords",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -163,28 +179,28 @@
         },
         "start_date": {
           "name": "start_date",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "due_date": {
           "name": "due_date",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "completed_at": {
           "name": "completed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "last_reviewed_at": {
           "name": "last_reviewed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -213,14 +229,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -316,14 +332,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -391,7 +407,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -441,8 +457,16 @@
           "notNull": false,
           "autoincrement": false
         },
-        "json": {
-          "name": "json",
+        "keywords": {
+          "name": "keywords",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "patterns": {
+          "name": "patterns",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -467,14 +491,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -504,8 +528,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "json": {
-          "name": "json",
+        "input_keywords": {
+          "name": "input_keywords",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -518,6 +542,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "input_patterns": {
+          "name": "input_patterns",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'[]'"
         },
         "chosen_context_id": {
           "name": "chosen_context_id",
@@ -571,7 +603,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -659,7 +691,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
