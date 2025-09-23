@@ -212,17 +212,33 @@ export class CaptureEngine {
 
     // Save each generated item as a capture
     for (const item of inference.generatedItems) {
+      // Map old item types to new capture types
+      let captureType: 'action' | 'note' | 'journal' | 'link' | 'someday' | 'reminder' | null = null;
+      switch (item.itemType) {
+        case 'action':
+        case 'someday':
+          captureType = item.itemType;
+          break;
+        case 'activity':
+          captureType = 'journal';
+          break;
+        case 'reference':
+          captureType = 'note';
+          break;
+        default:
+          captureType = 'note';
+      }
+      
       const capture = {
-        content: item.content,
+        item: item.content,
         rawInput: input.text,
-        captureType: item.itemType as 'action' | 'reference' | 'someday' | 'activity',
+        captureType,
         priority: item.priority as 'critical' | 'high' | 'medium' | 'low',
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId,
         confidence: inference.confidence,
         aiReasoning: item.reasoning,
         tags: JSON.stringify([inference.primaryTracker]),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify(this.inferenceEngine.extractKeywords(input.text)),
         captureSource: input.inputType === 'voice' ? 'voice' as const : 'manual' as const,
       };

@@ -21,19 +21,19 @@ export const captures = sqliteTable('captures', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
   
   // Core content
-  content: text('text').notNull(),
+  item: text('item').notNull(),
   rawInput: text('raw_input'), // Original input before AI processing
   
   // Capture metadata
   captureType: text('capture_type', { 
-    enum: ['action', 'reference', 'someday', 'activity'] 
-  }).notNull().default('action'),
+    enum: ['action', 'note', 'journal', 'link', 'someday', 'reminder'] 
+  }),
   priority: text('priority', { 
     enum: ['critical', 'high', 'medium', 'low'] 
-  }).notNull().default('medium'),
+  }),
   status: text('status', { 
-    enum: ['inbox', 'active', 'completed', 'cancelled', 'archived', 'someday'] 
-  }).notNull().default('inbox'),
+    enum: ['active', 'completed', 'cancelled', 'archived'] 
+  }).default('active'),
   
   // Context inference (AI-powered)
   contextId: text('context_id').references(() => contexts.id),
@@ -42,11 +42,10 @@ export const captures = sqliteTable('captures', {
   
   // Tags and categorization (stored as JSON strings for now)
   tags: text('tags').default('[]'), // #hashtags as JSON string
-  contextTags: text('context_tags').default('[]'), // @context as JSON string
   keywords: text('keywords').default('[]'), // extracted keywords as JSON string
   
   // Time tracking
-  startDate: text('start_date'), // ISO date string
+  reminderDate: text('reminder_date'), // ISO date string
   dueDate: text('due_date'), // ISO date string
   completedAt: text('completed_at'), // ISO datetime string
   
@@ -132,8 +131,8 @@ export const preferences = sqliteTable('preferences', {
   updatedAt: text('updated_at').$defaultFn(() => new Date().toISOString()),
 });
 
-// PREMIUM COLLECTIONS ADD-ON TABLES
-
+// PREMIUM COLLECTIONS ADD-ON TABLES (DEFERRED)
+/*
 // Collections - premium feature
 export const collections = sqliteTable('collections', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
@@ -166,27 +165,26 @@ export const captureCollections = sqliteTable('capture_collections', {
   
   createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
 });
+*/
 
 // SEARCH & ANALYTICS
 
 // Full-text search virtual table
 // Note: This will be created with a separate SQL command since Drizzle doesn't fully support FTS5 yet
-// CREATE VIRTUAL TABLE captures_fts USING fts5(content, tags, contextTags, content=captures, content_rowid=id);
+// CREATE VIRTUAL TABLE captures_fts USING fts5(item, tags, keywords, content=captures, content_rowid=id);
 
 // RELATIONSHIPS
 
-export const capturesRelations = relations(captures, ({ one, many }) => ({
+export const capturesRelations = relations(captures, ({ one }) => ({
   context: one(contexts, {
     fields: [captures.contextId],
     references: [contexts.id],
   }),
-  collections: many(captureCollections),
 }));
 
 export const contextsRelations = relations(contexts, ({ many }) => ({
   captures: many(captures),
   learningPatterns: many(learningPatterns),
-  collections: many(collections),
 }));
 
 export const learningPatternsRelations = relations(learningPatterns, ({ one }) => ({
@@ -197,25 +195,6 @@ export const learningPatternsRelations = relations(learningPatterns, ({ one }) =
   correctedContext: one(contexts, {
     fields: [learningPatterns.userCorrectedContextId],
     references: [contexts.id],
-  }),
-}));
-
-export const collectionsRelations = relations(collections, ({ one, many }) => ({
-  context: one(contexts, {
-    fields: [collections.contextId],
-    references: [contexts.id],
-  }),
-  captures: many(captureCollections),
-}));
-
-export const captureCollectionsRelations = relations(captureCollections, ({ one }) => ({
-  capture: one(captures, {
-    fields: [captureCollections.captureId],
-    references: [captures.id],
-  }),
-  collection: one(collections, {
-    fields: [captureCollections.collectionId],
-    references: [collections.id],
   }),
 }));
 
@@ -236,12 +215,14 @@ export type NewConfig = typeof config.$inferInsert;
 export type Preference = typeof preferences.$inferSelect;
 export type NewPreference = typeof preferences.$inferInsert;
 
-// Premium types
+// Premium types (DEFERRED)
+/*
 export type Collection = typeof collections.$inferSelect;
 export type NewCollection = typeof collections.$inferInsert;
 
 export type CaptureCollection = typeof captureCollections.$inferSelect;
 export type NewCaptureCollection = typeof captureCollections.$inferInsert;
+*/
 
 // ADHD-FRIENDLY QUERY HELPERS (to be used in DatabaseManager)
 

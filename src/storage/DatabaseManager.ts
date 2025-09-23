@@ -16,8 +16,6 @@ import {
   learningPatterns,
   config,
   preferences,
-  collections,
-  captureCollections,
   generateId,
   type Capture,
   type NewCapture,
@@ -191,8 +189,8 @@ export class DatabaseManager {
         and(
           eq(captures.status, 'active'),
           or(
-            isNull(captures.startDate),
-            lte(captures.startDate, now)
+            isNull(captures.reminderDate),
+            lte(captures.reminderDate, now)
           ),
           // Must be reviewed
           sql`${captures.lastReviewedAt} IS NOT NULL`
@@ -213,7 +211,7 @@ export class DatabaseManager {
       .where(
         and(
           eq(captures.status, 'active'),
-          sql`LENGTH(${captures.content}) < 100`,
+          sql`LENGTH(${captures.item}) < 100`,
           sql`${captures.priority} IN ('low', 'medium')`,
           sql`${captures.lastReviewedAt} IS NOT NULL`
         )
@@ -272,10 +270,11 @@ export class DatabaseManager {
 
   async searchCaptures(query: string, limit = 20): Promise<Capture[]> {
     try {
-      // Try to use FTS5 search first using raw SQLite
+      // Use FTS5 search. The `captures_fts` table is a virtual table that indexes the `captures` table.
+      // We match against the FTS table and then join back to the original `captures` table to get the full data.
       const ftsResults = this.sqlite.prepare(`
         SELECT c.* FROM captures c
-        JOIN captures_fts fts ON c.content = fts.content
+        JOIN captures_fts fts ON c.id = fts.rowid
         WHERE captures_fts MATCH ?
         ORDER BY rank
         LIMIT ?
@@ -288,13 +287,13 @@ export class DatabaseManager {
       console.warn('FTS search failed, falling back to LIKE search:', error);
     }
     
-    // Fallback to LIKE search
+    // Fallback to LIKE search if FTS fails or returns no results
     return this.db
       .select()
       .from(captures)
       .where(
         or(
-          like(captures.content, `%${query}%`),
+          like(captures.item, `%${query}%`),
           like(captures.tags, `%${query}%`),
           like(captures.keywords, `%${query}%`)
         )
@@ -380,13 +379,11 @@ export class DatabaseManager {
     try {
       // Drop all tables
       this.sqlite.exec('DROP TABLE IF EXISTS captures_fts;');
-      this.sqlite.exec('DROP TABLE IF EXISTS capture_collections;');
       this.sqlite.exec('DROP TABLE IF EXISTS captures;');
       this.sqlite.exec('DROP TABLE IF EXISTS learning_patterns;');
       this.sqlite.exec('DROP TABLE IF EXISTS contexts;');
       this.sqlite.exec('DROP TABLE IF EXISTS preferences;');
       this.sqlite.exec('DROP TABLE IF EXISTS config;');
-      this.sqlite.exec('DROP TABLE IF EXISTS collections;');
 
       // Recreate everything
       await this.setupDatabase();
@@ -459,50 +456,41 @@ export class DatabaseManager {
 
   private async createFullTextSearch(): Promise<void> {
     try {
-      // First, create the FTS virtual table without content table linking
-      // This avoids rowid issues with string primary keys
+      // FTS5 table using the 'content' option to link to the captures table.
+      // By omitting `content_rowid`, we let FTS5 use the table's implicit integer rowid,
+      // which avoids datatype mismatches with our text-based CUID `id`.
       this.sqlite.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS captures_fts USING fts5(
-          text,
+          item,
           tags,
-          context_tags,
-          keywords
+          keywords,
+          content='captures'
         )
       `);
       
-      // Create triggers to keep FTS in sync manually
+      // Triggers to keep the FTS index up-to-date automatically.
+      // These now operate on the implicit rowid.
       this.sqlite.exec(`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_insert
-        AFTER INSERT ON captures
-        BEGIN
-          INSERT INTO captures_fts (text, tags, context_tags, keywords)
-          VALUES (NEW.text, NEW.tags, NEW.context_tags, NEW.keywords);
-        END
+        CREATE TRIGGER IF NOT EXISTS captures_ai AFTER INSERT ON captures BEGIN
+          INSERT INTO captures_fts(rowid, item, tags, keywords) VALUES (new.rowid, new.item, new.tags, new.keywords);
+        END;
       `);
-
       this.sqlite.exec(`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_update
-        AFTER UPDATE ON captures
-        BEGIN
-          -- For simplicity, delete and re-insert on update
-          DELETE FROM captures_fts WHERE text = OLD.text;
-          INSERT INTO captures_fts (text, tags, context_tags, keywords)
-          VALUES (NEW.text, NEW.tags, NEW.context_tags, NEW.keywords);
-        END
+        CREATE TRIGGER IF NOT EXISTS captures_ad AFTER DELETE ON captures BEGIN
+          INSERT INTO captures_fts(captures_fts, rowid, item, tags, keywords) VALUES ('delete', old.rowid, old.item, old.tags, old.keywords);
+        END;
       `);
-
       this.sqlite.exec(`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_delete
-        AFTER DELETE ON captures
-        BEGIN
-          DELETE FROM captures_fts WHERE text = OLD.text;
-        END
+        CREATE TRIGGER IF NOT EXISTS captures_au AFTER UPDATE ON captures BEGIN
+          INSERT INTO captures_fts(captures_fts, rowid, item, tags, keywords) VALUES ('delete', old.rowid, old.item, old.tags, old.keywords);
+          INSERT INTO captures_fts(rowid, item, tags, keywords) VALUES (new.rowid, new.item, new.tags, new.keywords);
+        END;
       `);
       
       // Populate FTS table with existing captures
       this.sqlite.exec(`
-        INSERT OR IGNORE INTO captures_fts (text, tags, context_tags, keywords)
-        SELECT text, tags, context_tags, keywords FROM captures
+        INSERT OR IGNORE INTO captures_fts (rowid, item, tags, keywords)
+        SELECT rowid, item, tags, keywords FROM captures
       `);
       
       console.log('✅ Full-text search enabled');

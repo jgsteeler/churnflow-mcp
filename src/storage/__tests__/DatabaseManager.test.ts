@@ -28,16 +28,15 @@ describe('DatabaseManager', () => {
   describe('Capture Operations', () => {
     test('should create and retrieve captures', async () => {
       const testCapture = {
-        content: 'Test capture content',
+        item: 'Test capture content',
         rawInput: 'Test capture content',
         captureType: 'action' as const,
         priority: 'medium' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.95,
         aiReasoning: 'Test reasoning',
         tags: JSON.stringify(['test']),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify(['test', 'capture']),
         captureSource: 'manual' as const,
       };
@@ -45,7 +44,7 @@ describe('DatabaseManager', () => {
       const created = await dbManager.createCapture(testCapture);
       
       expect(created.id).toBeDefined();
-      expect(created.content).toBe(testCapture.content);
+      expect(created.item).toBe(testCapture.item);
       expect(created.captureType).toBe(testCapture.captureType);
       expect(created.priority).toBe(testCapture.priority);
       expect(created.status).toBe(testCapture.status);
@@ -59,16 +58,15 @@ describe('DatabaseManager', () => {
 
     test('should update captures', async () => {
       const testCapture = {
-        content: 'Original content',
+        item: 'Original content',
         rawInput: 'Original content',
         captureType: 'action' as const,
         priority: 'low' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.5,
         aiReasoning: 'Original reasoning',
         tags: JSON.stringify(['original']),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify(['original']),
         captureSource: 'manual' as const,
       };
@@ -77,29 +75,28 @@ describe('DatabaseManager', () => {
       
       const updates = {
         priority: 'high' as const,
-        status: 'active' as const,
+        status: 'completed' as const,
       };
 
       const updated = await dbManager.updateCapture(created.id, updates);
       
       expect(updated?.priority).toBe('high');
-      expect(updated?.status).toBe('active');
-      expect(updated?.content).toBe(testCapture.content); // unchanged
+      expect(updated?.status).toBe('completed');
+      expect(updated?.item).toBe(testCapture.item); // unchanged
       expect(updated?.updatedAt).not.toBe(created.updatedAt);
     });
 
     test('should delete captures', async () => {
       const testCapture = {
-        content: 'Content to delete',
+        item: 'Content to delete',
         rawInput: 'Content to delete',
         captureType: 'action' as const,
         priority: 'medium' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.8,
         aiReasoning: 'Delete test',
         tags: JSON.stringify([]),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify([]),
         captureSource: 'manual' as const,
       };
@@ -159,47 +156,45 @@ describe('DatabaseManager', () => {
   });
 
   describe('Search Operations', () => {
-    test('should search captures by content', async () => {
+    test('should search captures by item', async () => {
       await dbManager.createCapture({
-        content: 'Database integration testing',
+        item: 'Database integration testing',
         rawInput: 'Database integration testing',
         captureType: 'action' as const,
         priority: 'medium' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.9,
         aiReasoning: 'Test',
         tags: JSON.stringify(['database']),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify(['database', 'testing']),
         captureSource: 'manual' as const,
       });
 
       await dbManager.createCapture({
-        content: 'UI design mockups',
+        item: 'UI design mockups',
         rawInput: 'UI design mockups',
-        captureType: 'reference' as const,
+        captureType: 'note' as const,
         priority: 'low' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.8,
         aiReasoning: 'Test',
         tags: JSON.stringify(['design']),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify(['ui', 'design']),
         captureSource: 'manual' as const,
       });
 
       const results = await dbManager.searchCaptures('database');
       expect(results.length).toBeGreaterThanOrEqual(1);
-      expect(results[0].content).toContain('Database');
+      expect(results[0].item).toContain('Database');
     });
   });
 
   describe('Review System', () => {
     test('should identify captures needing review', async () => {
       const capture = await dbManager.createCapture({
-        content: 'Never reviewed capture',
+        item: 'Never reviewed capture',
         rawInput: 'Never reviewed capture',
         captureType: 'action' as const,
         priority: 'medium' as const,
@@ -208,7 +203,6 @@ describe('DatabaseManager', () => {
         confidence: 0.9,
         aiReasoning: 'Test',
         tags: JSON.stringify([]),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify([]),
         captureSource: 'manual' as const,
       });
@@ -220,16 +214,15 @@ describe('DatabaseManager', () => {
 
     test('should mark captures as reviewed', async () => {
       const capture = await dbManager.createCapture({
-        content: 'To be reviewed',
+        item: 'To be reviewed',
         rawInput: 'To be reviewed',
         captureType: 'action' as const,
         priority: 'medium' as const,
-        status: 'inbox' as const,
+        status: 'active' as const,
         contextId: null,
         confidence: 0.9,
         aiReasoning: 'Test',
         tags: JSON.stringify([]),
-        contextTags: JSON.stringify([]),
         keywords: JSON.stringify([]),
         captureSource: 'manual' as const,
       });
@@ -247,23 +240,8 @@ describe('DatabaseManager', () => {
     test('should provide dashboard statistics', async () => {
       // Create test captures with different statuses
       await dbManager.createCapture({
-        content: 'Inbox item',
-        rawInput: 'Inbox item',
-        captureType: 'action' as const,
-        priority: 'medium' as const,
-        status: 'inbox' as const,
-        contextId: null,
-        confidence: 0.9,
-        aiReasoning: 'Test',
-        tags: JSON.stringify([]),
-        contextTags: JSON.stringify([]),
-        keywords: JSON.stringify([]),
-        captureSource: 'manual' as const,
-      });
-
-      await dbManager.createCapture({
-        content: 'Active item',
-        rawInput: 'Active item',
+        item: 'Active item 1',
+        rawInput: 'Active item 1',
         captureType: 'action' as const,
         priority: 'medium' as const,
         status: 'active' as const,
@@ -271,15 +249,27 @@ describe('DatabaseManager', () => {
         confidence: 0.9,
         aiReasoning: 'Test',
         tags: JSON.stringify([]),
-        contextTags: JSON.stringify([]),
+        keywords: JSON.stringify([]),
+        captureSource: 'manual' as const,
+      });
+
+      await dbManager.createCapture({
+        item: 'Active item 2',
+        rawInput: 'Active item 2',
+        captureType: 'action' as const,
+        priority: 'medium' as const,
+        status: 'active' as const,
+        contextId: null,
+        confidence: 0.9,
+        aiReasoning: 'Test',
+        tags: JSON.stringify([]),
         keywords: JSON.stringify([]),
         captureSource: 'manual' as const,
       });
 
       const stats = await dbManager.getDashboardStats();
       expect(stats).toBeDefined();
-      expect(stats.inbox).toBeGreaterThanOrEqual(1);
-      expect(stats.active).toBeGreaterThanOrEqual(1);
+      expect(stats.active).toBeGreaterThanOrEqual(2);
       expect(typeof stats.completed).toBe('number');
       expect(typeof stats.needingReview).toBe('number');
       expect(typeof stats.overdue).toBe('number');
