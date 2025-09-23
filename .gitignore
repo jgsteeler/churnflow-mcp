@@ -35,3 +35,6 @@ coverage/
 *.tmp
 *.temp
 *.db
+/src/storage/__tests__/test-*.db*
+*.db-shm
+*.db-wal

@@ -4,7 +4,7 @@ CREATE TABLE `capture_collections` (
 	`collection_id` text NOT NULL,
 	`added_reason` text,
 	`sort_order` integer DEFAULT 0,
-	`created_at` integer,
+	`created_at` text,
 	FOREIGN KEY (`capture_id`) REFERENCES `captures`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`collection_id`) REFERENCES `collections`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -19,16 +19,18 @@ CREATE TABLE `captures` (
 	`context_id` text,
 	`confidence` real,
 	`ai_reasoning` text,
-	`json` text DEFAULT '[]',
-	`start_date` integer,
-	`due_date` integer,
-	`completed_at` integer,
-	`last_reviewed_at` integer,
+	`tags` text DEFAULT '[]',
+	`context_tags` text DEFAULT '[]',
+	`keywords` text DEFAULT '[]',
+	`start_date` text,
+	`due_date` text,
+	`completed_at` text,
+	`last_reviewed_at` text,
 	`review_score` real,
 	`review_notes` text,
 	`capture_source` text DEFAULT 'manual',
-	`created_at` integer,
-	`updated_at` integer,
+	`created_at` text,
+	`updated_at` text,
 	FOREIGN KEY (`context_id`) REFERENCES `contexts`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -42,8 +44,8 @@ CREATE TABLE `collections` (
 	`is_archive` integer DEFAULT false,
 	`context_id` text,
 	`is_premium` integer DEFAULT true,
-	`created_at` integer,
-	`updated_at` integer,
+	`created_at` text,
+	`updated_at` text,
 	FOREIGN KEY (`context_id`) REFERENCES `contexts`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -53,7 +55,7 @@ CREATE TABLE `config` (
 	`value` text NOT NULL,
 	`category` text DEFAULT 'general',
 	`description` text,
-	`updated_at` integer
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `contexts` (
@@ -62,18 +64,20 @@ CREATE TABLE `contexts` (
 	`display_name` text NOT NULL,
 	`description` text,
 	`color` text,
-	`json` text DEFAULT '[]',
+	`keywords` text DEFAULT '[]',
+	`patterns` text DEFAULT '[]',
 	`active` integer DEFAULT true,
 	`priority` integer DEFAULT 0,
-	`created_at` integer,
-	`updated_at` integer
+	`created_at` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `contexts_name_unique` ON `contexts` (`name`);--> statement-breakpoint
 CREATE TABLE `learning_patterns` (
 	`id` text PRIMARY KEY NOT NULL,
-	`json` text DEFAULT '[]',
+	`input_keywords` text DEFAULT '[]',
 	`input_length` integer,
+	`input_patterns` text DEFAULT '[]',
 	`chosen_context_id` text,
 	`chosen_type` text NOT NULL,
 	`original_confidence` real NOT NULL,
@@ -81,7 +85,7 @@ CREATE TABLE `learning_patterns` (
 	`user_corrected_context_id` text,
 	`user_corrected_type` text,
 	`weight` real DEFAULT 1,
-	`created_at` integer,
+	`created_at` text,
 	FOREIGN KEY (`chosen_context_id`) REFERENCES `contexts`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`user_corrected_context_id`) REFERENCES `contexts`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -93,7 +97,7 @@ CREATE TABLE `preferences` (
 	`type` text DEFAULT 'string',
 	`category` text DEFAULT 'general',
 	`description` text,
-	`updated_at` integer
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `preferences_key_unique` ON `preferences` (`key`);

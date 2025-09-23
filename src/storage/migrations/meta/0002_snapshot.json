@@ -1,89 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7f08e357-0d95-48bc-b18b-96f203be70a1",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "2bb35b63-6a7a-4e7a-98fa-9809f3da51cc",
+  "prevId": "db3c7c37-dabd-4f9a-a71a-6a18151aaa76",
   "tables": {
-    "capture_collections": {
-      "name": "capture_collections",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "capture_id": {
-          "name": "capture_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "collection_id": {
-          "name": "collection_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "added_reason": {
-          "name": "added_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "sort_order": {
-          "name": "sort_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "capture_collections_capture_id_captures_id_fk": {
-          "name": "capture_collections_capture_id_captures_id_fk",
-          "tableFrom": "capture_collections",
-          "tableTo": "captures",
-          "columnsFrom": [
-            "capture_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "capture_collections_collection_id_collections_id_fk": {
-          "name": "capture_collections_collection_id_collections_id_fk",
-          "tableFrom": "capture_collections",
-          "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "captures": {
       "name": "captures",
       "columns": {
@@ -94,8 +14,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "content": {
-          "name": "content",
+        "item": {
+          "name": "item",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -112,25 +32,23 @@
           "name": "capture_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'action'"
+          "notNull": false,
+          "autoincrement": false
         },
         "priority": {
           "name": "priority",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'medium'"
+          "notNull": false,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
-          "default": "'inbox'"
+          "default": "'active'"
         },
         "context_id": {
           "name": "context_id",
@@ -161,14 +79,6 @@
           "autoincrement": false,
           "default": "'[]'"
         },
-        "context_tags": {
-          "name": "context_tags",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
         "keywords": {
           "name": "keywords",
           "type": "text",
@@ -177,8 +87,8 @@
           "autoincrement": false,
           "default": "'[]'"
         },
-        "start_date": {
-          "name": "start_date",
+        "reminder_date": {
+          "name": "reminder_date",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -247,117 +157,6 @@
         "captures_context_id_contexts_id_fk": {
           "name": "captures_context_id_contexts_id_fk",
           "tableFrom": "captures",
-          "tableTo": "contexts",
-          "columnsFrom": [
-            "context_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "collections": {
-      "name": "collections",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "color": {
-          "name": "color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "icon": {
-          "name": "icon",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "is_archive": {
-          "name": "is_archive",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": false
-        },
-        "context_id": {
-          "name": "context_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "is_premium": {
-          "name": "is_premium",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "collections_name_unique": {
-          "name": "collections_name_unique",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "collections_context_id_contexts_id_fk": {
-          "name": "collections_context_id_contexts_id_fk",
-          "tableFrom": "collections",
           "tableTo": "contexts",
           "columnsFrom": [
             "context_id"
@@ -717,7 +516,10 @@
   "_meta": {
     "schemas": {},
     "tables": {},
-    "columns": {}
+    "columns": {
+      "\"captures\".\"text\"": "\"captures\".\"item\"",
+      "\"captures\".\"start_date\"": "\"captures\".\"reminder_date\""
+    }
   },
   "internal": {
     "indexes": {}

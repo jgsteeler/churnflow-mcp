@@ -1,0 +1,1 @@
+ALTER TABLE `captures` RENAME COLUMN "content" TO "text";

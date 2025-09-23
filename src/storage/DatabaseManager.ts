@@ -16,8 +16,6 @@ import {
   learningPatterns,
   config,
   preferences,
-  collections,
-  captureCollections,
   generateId,
   type Capture,
   type NewCapture,
@@ -56,8 +54,6 @@ export class DatabaseManager {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    console.log('🗄️ Initializing ChurnFlow database...');
-
     try {
       // Configure SQLite for optimal performance
       if (this.dbConfig.enableWAL !== false) {
@@ -68,33 +64,33 @@ export class DatabaseManager {
       }
       this.sqlite.exec('PRAGMA synchronous = NORMAL;');
 
-      // Run migrations to ensure tables exist
-      await this.runMigrations();
-
-      // Initialize with seed data if needed
-      await this.seedInitialData();
-
-      // Create full-text search table (Drizzle doesn't support FTS5 declaratively yet)
-      await this.createFullTextSearch();
+      // Verify database exists and is accessible
+      await this.verifyDatabaseSetup();
 
       this.isInitialized = true;
-      console.log('✅ ChurnFlow database initialized successfully!');
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      console.error('❌ Database not available:', error);
       throw error;
+    }
+  }
+
+  private async verifyDatabaseSetup(): Promise<void> {
+    // Quick check that essential tables exist
+    try {
+      await this.db.select().from(captures).limit(1);
+    } catch (error) {
+      throw new Error('Database not set up. Run: npm run db:setup');
     }
   }
 
   // CORE CAPTURE OPERATIONS
 
   async createCapture(capture: NewCapture): Promise<Capture> {
-    console.log('Creating capture with data:', JSON.stringify(capture, null, 2));
     const insertData = {
       ...capture,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
-    console.log('Insert data:', JSON.stringify(insertData, null, 2));
     
     const [created] = await this.db.insert(captures).values(insertData).returning();
     return created;
@@ -112,7 +108,7 @@ export class DatabaseManager {
   async updateCapture(id: string, updates: Partial<NewCapture>): Promise<Capture | null> {
     const [updated] = await this.db
       .update(captures)
-      .set({ ...updates, updatedAt: Date.now() })
+      .set({ ...updates, updatedAt: new Date().toISOString() })
       .where(eq(captures.id, id))
       .returning();
     return updated || null;
@@ -146,18 +142,18 @@ export class DatabaseManager {
           isNull(captures.lastReviewedAt),
           // Due soon
           and(
-            lte(captures.dueDate, threeDaysFromNow.getTime()),
+            lte(captures.dueDate, threeDaysFromNow.toISOString()),
             isNull(captures.completedAt)
           ),
           // High priority and stale
           and(
             sql`${captures.priority} IN ('critical', 'high')`,
-            lt(captures.lastReviewedAt, oneWeekAgo.getTime())
+            lt(captures.lastReviewedAt, oneWeekAgo.toISOString())
           ),
           // Active but stale
           and(
             eq(captures.status, 'active'),
-            lt(captures.lastReviewedAt, twoWeeksAgo.getTime())
+            lt(captures.lastReviewedAt, twoWeeksAgo.toISOString())
           )
         )
       )
@@ -173,9 +169,9 @@ export class DatabaseManager {
     const result = await this.db
       .update(captures)
       .set({
-        lastReviewedAt: Date.now(),
+        lastReviewedAt: new Date().toISOString(),
         reviewNotes,
-        updatedAt: Date.now(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(captures.id, id));
     return result.changes > 0;
@@ -184,7 +180,7 @@ export class DatabaseManager {
   // NEXT ACTIONS - What to work on now
 
   async getNextActions(limit = 10): Promise<Capture[]> {
-    const now = new Date();
+    const now = new Date().toISOString();
     
     return this.db
       .select()
@@ -193,8 +189,8 @@ export class DatabaseManager {
         and(
           eq(captures.status, 'active'),
           or(
-            isNull(captures.startDate),
-            lte(captures.startDate, now.getTime())
+            isNull(captures.reminderDate),
+            lte(captures.reminderDate, now)
           ),
           // Must be reviewed
           sql`${captures.lastReviewedAt} IS NOT NULL`
@@ -215,7 +211,7 @@ export class DatabaseManager {
       .where(
         and(
           eq(captures.status, 'active'),
-          sql`LENGTH(${captures.content}) < 100`,
+          sql`LENGTH(${captures.item}) < 100`,
           sql`${captures.priority} IN ('low', 'medium')`,
           sql`${captures.lastReviewedAt} IS NOT NULL`
         )
@@ -247,8 +243,8 @@ export class DatabaseManager {
   async createContext(context: NewContext): Promise<Context> {
     const [created] = await this.db.insert(contexts).values({
       ...context,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }).returning();
     return created;
   }
@@ -273,29 +269,36 @@ export class DatabaseManager {
   // SEARCH OPERATIONS
 
   async searchCaptures(query: string, limit = 20): Promise<Capture[]> {
-    // Use full-text search when available, otherwise fall back to LIKE
     try {
-      return await this.db.run(sql`
+      // Use FTS5 search. The `captures_fts` table is a virtual table that indexes the `captures` table.
+      // We match against the FTS table and then join back to the original `captures` table to get the full data.
+      const ftsResults = this.sqlite.prepare(`
         SELECT c.* FROM captures c
         JOIN captures_fts fts ON c.id = fts.rowid
-        WHERE captures_fts MATCH ${query}
-        ORDER BY bm25(captures_fts)
-        LIMIT ${limit}
-      `);
-    } catch {
-      // Fallback to LIKE search
-      return this.db
-        .select()
-        .from(captures)
-        .where(
-          or(
-            like(captures.content, `%${query}%`),
-            like(captures.tags, `%${query}%`),
-            like(captures.keywords, `%${query}%`)
-          )
-        )
-        .limit(limit);
+        WHERE captures_fts MATCH ?
+        ORDER BY rank
+        LIMIT ?
+      `).all(query, limit) as Capture[];
+      
+      if (ftsResults && ftsResults.length > 0) {
+        return ftsResults;
+      }
+    } catch (error) {
+      console.warn('FTS search failed, falling back to LIKE search:', error);
     }
+    
+    // Fallback to LIKE search if FTS fails or returns no results
+    return this.db
+      .select()
+      .from(captures)
+      .where(
+        or(
+          like(captures.item, `%${query}%`),
+          like(captures.tags, `%${query}%`),
+          like(captures.keywords, `%${query}%`)
+        )
+      )
+      .limit(limit);
   }
 
   // LEARNING OPERATIONS
@@ -303,7 +306,7 @@ export class DatabaseManager {
   async recordLearningPattern(pattern: NewLearningPattern): Promise<void> {
     await this.db.insert(learningPatterns).values({
       ...pattern,
-      createdAt: Date.now(),
+      createdAt: new Date().toISOString(),
     });
   }
 
@@ -311,7 +314,7 @@ export class DatabaseManager {
     patternId: string, 
     wasCorrect: boolean, 
     userCorrectedContextId?: string,
-    userCorrectedType?: string
+    userCorrectedType?: 'action' | 'reference' | 'someday' | 'activity'
   ): Promise<void> {
     await this.db
       .update(learningPatterns)
@@ -333,19 +336,63 @@ export class DatabaseManager {
     needingReview: number;
     overdue: number;
   }> {
-    const now = new Date();
+    const now = new Date().toISOString();
     
     const [stats] = await this.db
       .select({
         inbox: sql<number>`COUNT(CASE WHEN status = 'inbox' THEN 1 END)`,
         active: sql<number>`COUNT(CASE WHEN status = 'active' THEN 1 END)`,
         completed: sql<number>`COUNT(CASE WHEN status = 'completed' THEN 1 END)`,
-        needingReview: sql<number>`COUNT(CASE WHEN lastReviewedAt IS NULL THEN 1 END)`,
-        overdue: sql<number>`COUNT(CASE WHEN dueDate < ${now.getTime()} AND status != 'completed' THEN 1 END)`,
+        needingReview: sql<number>`COUNT(CASE WHEN last_reviewed_at IS NULL THEN 1 END)`,
+        overdue: sql<number>`COUNT(CASE WHEN due_date < ${now} AND status != 'completed' THEN 1 END)`,
       })
       .from(captures);
       
     return stats || { inbox: 0, active: 0, completed: 0, needingReview: 0, overdue: 0 };
+  }
+
+  // DATABASE SETUP METHODS (Only called during setup, not normal operations)
+
+  async setupDatabase(): Promise<void> {
+    console.log('🗄️ Setting up ChurnFlow database...');
+    
+    try {
+      // Run migrations to ensure tables exist
+      await this.runMigrations();
+
+      // Initialize with seed data if needed
+      await this.seedInitialData();
+
+      // Enable full-text search
+      await this.createFullTextSearch();
+
+      console.log('✅ ChurnFlow database setup completed successfully!');
+    } catch (error) {
+      console.error('❌ Failed to setup database:', error);
+      throw error;
+    }
+  }
+
+  async resetDatabase(): Promise<void> {
+    console.log('🗑️ Resetting ChurnFlow database...');
+    
+    try {
+      // Drop all tables
+      this.sqlite.exec('DROP TABLE IF EXISTS captures_fts;');
+      this.sqlite.exec('DROP TABLE IF EXISTS captures;');
+      this.sqlite.exec('DROP TABLE IF EXISTS learning_patterns;');
+      this.sqlite.exec('DROP TABLE IF EXISTS contexts;');
+      this.sqlite.exec('DROP TABLE IF EXISTS preferences;');
+      this.sqlite.exec('DROP TABLE IF EXISTS config;');
+
+      // Recreate everything
+      await this.setupDatabase();
+      
+      console.log('✅ Database reset completed!');
+    } catch (error) {
+      console.error('❌ Failed to reset database:', error);
+      throw error;
+    }
   }
 
   // UTILITY METHODS
@@ -388,8 +435,8 @@ export class DatabaseManager {
     for (const context of defaultContexts) {
       await this.db.insert(contexts).values({
         ...context,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     }
 
@@ -409,46 +456,41 @@ export class DatabaseManager {
 
   private async createFullTextSearch(): Promise<void> {
     try {
-      await this.db.run(sql`
+      // FTS5 table using the 'content' option to link to the captures table.
+      // By omitting `content_rowid`, we let FTS5 use the table's implicit integer rowid,
+      // which avoids datatype mismatches with our text-based CUID `id`.
+      this.sqlite.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS captures_fts USING fts5(
-          content,
+          item,
           tags,
-          contextTags,
           keywords,
-          content=captures,
-          content_rowid=id
+          content='captures'
         )
       `);
       
-      // Create triggers to keep FTS in sync
-      await this.db.run(sql`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_insert
-        AFTER INSERT ON captures
-        BEGIN
-          INSERT INTO captures_fts (rowid, content, tags, contextTags, keywords)
-          VALUES (NEW.id, NEW.content, NEW.tags, NEW.context_tags, NEW.keywords);
-        END
+      // Triggers to keep the FTS index up-to-date automatically.
+      // These now operate on the implicit rowid.
+      this.sqlite.exec(`
+        CREATE TRIGGER IF NOT EXISTS captures_ai AFTER INSERT ON captures BEGIN
+          INSERT INTO captures_fts(rowid, item, tags, keywords) VALUES (new.rowid, new.item, new.tags, new.keywords);
+        END;
       `);
-
-      await this.db.run(sql`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_update
-        AFTER UPDATE ON captures
-        BEGIN
-          UPDATE captures_fts SET
-            content = NEW.content,
-            tags = NEW.tags,
-            contextTags = NEW.context_tags,
-            keywords = NEW.keywords
-          WHERE rowid = NEW.id;
-        END
+      this.sqlite.exec(`
+        CREATE TRIGGER IF NOT EXISTS captures_ad AFTER DELETE ON captures BEGIN
+          INSERT INTO captures_fts(captures_fts, rowid, item, tags, keywords) VALUES ('delete', old.rowid, old.item, old.tags, old.keywords);
+        END;
       `);
-
-      await this.db.run(sql`
-        CREATE TRIGGER IF NOT EXISTS captures_fts_delete
-        AFTER DELETE ON captures
-        BEGIN
-          DELETE FROM captures_fts WHERE rowid = OLD.id;
-        END
+      this.sqlite.exec(`
+        CREATE TRIGGER IF NOT EXISTS captures_au AFTER UPDATE ON captures BEGIN
+          INSERT INTO captures_fts(captures_fts, rowid, item, tags, keywords) VALUES ('delete', old.rowid, old.item, old.tags, old.keywords);
+          INSERT INTO captures_fts(rowid, item, tags, keywords) VALUES (new.rowid, new.item, new.tags, new.keywords);
+        END;
+      `);
+      
+      // Populate FTS table with existing captures
+      this.sqlite.exec(`
+        INSERT OR IGNORE INTO captures_fts (rowid, item, tags, keywords)
+        SELECT rowid, item, tags, keywords FROM captures
       `);
       
       console.log('✅ Full-text search enabled');
@@ -458,102 +500,21 @@ export class DatabaseManager {
   }
 
   private async runMigrations(): Promise<void> {
+    // Use Drizzle ORM migrator for schema evolution
     try {
-      const migrationsPath = path.join(process.cwd(), 'src/storage/migrations');
-      if (fs.existsSync(migrationsPath)) {
-        console.log('🔄 Running database migrations...');
-        migrate(this.db, { migrationsFolder: migrationsPath });
-        console.log('✅ Database migrations completed');
-      } else {
-        console.log('ℹ️ No migrations folder found, creating tables manually...');
-        await this.createTablesManually();
-      }
+      await migrate(this.db, { migrationsFolder: path.join(__dirname, 'migrations') });
+      console.log('✅ Database migrations applied');
     } catch (error) {
-      console.warn('⚠️ Migration failed, creating tables manually:', error);
-      await this.createTablesManually();
+      console.error('❌ Migration failed:', error);
+      throw error;
     }
   }
 
+  /**
+   * @deprecated Manual table creation is deprecated. Use Drizzle ORM migrations instead.
+   */
   private async createTablesManually(): Promise<void> {
-    // As a fallback, create tables using raw SQL based on our schema
-    // This ensures the system works even without proper migrations
-    const createTablesSql = `
-      CREATE TABLE IF NOT EXISTS contexts (
-        id TEXT PRIMARY KEY,
-        name TEXT UNIQUE NOT NULL,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        color TEXT,
-        json TEXT DEFAULT '[]',
-        active INTEGER DEFAULT 1,
-        priority INTEGER DEFAULT 0,
-        created_at INTEGER,
-        updated_at INTEGER
-      );
-
-      CREATE TABLE IF NOT EXISTS captures (
-        id TEXT PRIMARY KEY,
-        content TEXT NOT NULL,
-        raw_input TEXT,
-        capture_type TEXT DEFAULT 'action' NOT NULL,
-        priority TEXT DEFAULT 'medium' NOT NULL,
-        status TEXT DEFAULT 'inbox' NOT NULL,
-        context_id TEXT,
-        confidence REAL,
-        ai_reasoning TEXT,
-        json TEXT DEFAULT '[]',
-        start_date INTEGER,
-        due_date INTEGER,
-        completed_at INTEGER,
-        last_reviewed_at INTEGER,
-        review_score REAL,
-        review_notes TEXT,
-        capture_source TEXT DEFAULT 'manual',
-        created_at INTEGER,
-        updated_at INTEGER,
-        FOREIGN KEY (context_id) REFERENCES contexts(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS preferences (
-        id TEXT PRIMARY KEY,
-        key TEXT UNIQUE NOT NULL,
-        value TEXT NOT NULL,
-        type TEXT DEFAULT 'string',
-        category TEXT DEFAULT 'general',
-        description TEXT,
-        updated_at INTEGER
-      );
-
-      CREATE TABLE IF NOT EXISTS config (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        category TEXT DEFAULT 'general',
-        description TEXT,
-        updated_at INTEGER
-      );
-
-      CREATE TABLE IF NOT EXISTS learning_patterns (
-        id TEXT PRIMARY KEY,
-        json TEXT DEFAULT '[]',
-        input_length INTEGER,
-        chosen_context_id TEXT,
-        chosen_type TEXT NOT NULL,
-        original_confidence REAL NOT NULL,
-        was_correct INTEGER,
-        user_corrected_context_id TEXT,
-        user_corrected_type TEXT,
-        weight REAL DEFAULT 1,
-        created_at INTEGER,
-        FOREIGN KEY (chosen_context_id) REFERENCES contexts(id),
-        FOREIGN KEY (user_corrected_context_id) REFERENCES contexts(id)
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS contexts_name_unique ON contexts (name);
-      CREATE UNIQUE INDEX IF NOT EXISTS preferences_key_unique ON preferences (key);
-    `;
-
-    this.sqlite.exec(createTablesSql);
-    console.log('✅ Tables created manually');
+    console.warn('Manual table creation is deprecated. Use Drizzle ORM migrations instead.');
   }
 
   async close(): Promise<void> {

@@ -112,7 +112,7 @@ async function testDatabase() {
       if (firstCapture) {
         const updated = await db.updateCapture(firstCapture.id, { 
           status: 'active',
-          lastReviewedAt: new Date() 
+          lastReviewedAt: new Date().toISOString() 
         });
         console.log('  Status updated:', updated ? '✅ Success' : '❌ Failed');
       }
