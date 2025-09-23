@@ -85,6 +85,18 @@ export class DatabaseManager {
 
   // CORE CAPTURE OPERATIONS
 
+  async createRawCapture(rawInput: string, source: 'manual' | 'voice' | 'api' | 'import' = 'manual'): Promise<Capture> {
+    const captureData: NewCapture = {
+      item: rawInput, // Use raw input as initial item, will be refined by AI
+      rawInput: rawInput,
+      status: 'processing',
+      captureSource: source,
+    };
+    
+    const [created] = await this.db.insert(captures).values(captureData).returning();
+    return created;
+  }
+
   async createCapture(capture: NewCapture): Promise<Capture> {
     const insertData = {
       ...capture,

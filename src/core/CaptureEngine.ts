@@ -71,14 +71,25 @@ export class CaptureEngine {
       await this.initialize();
     }
 
-    // Normalize input
     const captureInput: CaptureInput =
       typeof input === "string" ? { text: input, inputType: "text" } : input;
 
     console.log(`🎯 Capturing: "${captureInput.text}"`);
 
+    // Step 1: Create a raw capture record in the database if available
+    let rawCaptureId: string | null = null;
+    if (this.databaseAvailable) {
+      try {
+        const rawCapture = await this.databaseManager.createRawCapture(captureInput.text, captureInput.inputType as 'manual' | 'voice' | 'api' | 'import');
+        rawCaptureId = rawCapture.id;
+        console.log(`📝 Raw capture created with ID: ${rawCaptureId}`);
+      } catch (dbError) {
+        console.warn("⚠️ Could not create raw capture in DB, continuing with file-based capture.", dbError);
+      }
+    }
+
     try {
-      // Use AI to infer routing and generate multiple items
+      // Step 2: Use AI to infer routing and generate multiple items
       const inference = await this.inferenceEngine.inferCapture(captureInput);
 
       console.log(
@@ -91,6 +102,14 @@ export class CaptureEngine {
 
       // Handle low confidence - route to review
       if (inference.requiresReview) {
+        // If we have a DB record, update it to reflect the review status
+        if (rawCaptureId && this.databaseAvailable) {
+          await this.databaseManager.updateCapture(rawCaptureId, {
+            status: 'active', // or a dedicated 'review' status if you add one
+            aiReasoning: 'Low confidence, routed to review.',
+            confidence: inference.confidence,
+          });
+        }
         return await this.routeToReview(captureInput, inference);
       }
 
@@ -99,7 +118,6 @@ export class CaptureEngine {
       for (const completion of inference.taskCompletions) {
         console.log(`✅ Task completion detected: ${completion.description} in ${completion.tracker}`);
         
-        // Actually mark the task as complete in the tracker file
         const success = await this.trackerManager.markTaskComplete(
           completion.tracker,
           completion.description
@@ -154,15 +172,48 @@ export class CaptureEngine {
         }
       }
 
-      // Determine overall success
       const overallSuccess = itemResults.some((result) => result.success);
       
-      // Save to database if available (optional - doesn't affect capture success)
-      if (overallSuccess && this.databaseAvailable) {
+      // Step 3: Update the database record with the inference results
+      if (rawCaptureId && this.databaseAvailable) {
         try {
-          await this.saveCaptureToDatabase(captureInput, inference, itemResults, overallSuccess);
+          // For simplicity, we'll update the raw capture with the details of the *first* generated item.
+          // A more complex implementation could create multiple linked captures.
+          const primaryItem = inference.generatedItems[0];
+          if (primaryItem) {
+            const context = await this.databaseManager.getContextByName(primaryItem.tracker);
+            
+            let captureType: 'action' | 'note' | 'journal' | 'link' | 'someday' | 'reminder' | null = null;
+            switch (primaryItem.itemType) {
+              case 'action':
+              case 'someday':
+                captureType = primaryItem.itemType;
+                break;
+              case 'activity':
+                captureType = 'journal';
+                break;
+              case 'reference':
+                captureType = 'note';
+                break;
+              default:
+                captureType = 'note';
+            }
+
+            await this.databaseManager.updateCapture(rawCaptureId, {
+              item: primaryItem.content,
+              captureType,
+              priority: primaryItem.priority as 'critical' | 'high' | 'medium' | 'low',
+              status: 'active',
+              contextId: context?.id || null,
+              confidence: inference.confidence,
+              aiReasoning: primaryItem.reasoning,
+              tags: JSON.stringify([primaryItem.tracker]),
+              keywords: JSON.stringify(this.inferenceEngine.extractKeywords(captureInput.text)),
+            });
+            console.log(`💾 Capture record ${rawCaptureId} updated with AI inference.`);
+          }
         } catch (dbError) {
-          console.warn("⚠️ Failed to save to database (file saved successfully):", dbError);
+          console.warn("⚠️ Failed to update capture in database:", dbError);
         }
       }
 
@@ -177,7 +228,14 @@ export class CaptureEngine {
     } catch (error) {
       console.error("❌ Capture failed:", error);
 
-      // Emergency fallback - try to save somewhere
+      // If we have a DB record, mark it as failed
+      if (rawCaptureId && this.databaseAvailable) {
+        await this.databaseManager.updateCapture(rawCaptureId, {
+          status: 'cancelled', // Or a new 'failed' status
+          aiReasoning: `Capture processing failed: ${(error as Error).message}`,
+        });
+      }
+
       return await this.emergencyCapture(captureInput, error as Error);
     }
   }
@@ -191,6 +249,10 @@ export class CaptureEngine {
     itemResults: any[],
     success: boolean
   ): Promise<void> {
+    // This method is now superseded by the new capture flow, but we'll keep it for now.
+    // The new flow creates a raw capture and then updates it.
+    console.warn("Legacy `saveCaptureToDatabase` called. This should be phased out.");
+    
     // Find or create context
     let contextId: string | null = null;
     if (inference.primaryTracker) {
@@ -198,7 +260,6 @@ export class CaptureEngine {
       if (existingContext) {
         contextId = existingContext.id;
       } else {
-        // Create context from tracker info
         const newContext = await this.databaseManager.createContext({
           name: inference.primaryTracker,
           displayName: inference.primaryTracker.charAt(0).toUpperCase() + inference.primaryTracker.slice(1),
@@ -212,7 +273,6 @@ export class CaptureEngine {
 
     // Save each generated item as a capture
     for (const item of inference.generatedItems) {
-      // Map old item types to new capture types
       let captureType: 'action' | 'note' | 'journal' | 'link' | 'someday' | 'reminder' | null = null;
       switch (item.itemType) {
         case 'action':
@@ -246,17 +306,6 @@ export class CaptureEngine {
       await this.databaseManager.createCapture(capture);
       console.log(`💾 Saved to database: ${item.itemType} in ${inference.primaryTracker}`);
     }
-
-    // Record learning pattern for AI improvement
-    await this.databaseManager.recordLearningPattern({
-      inputKeywords: JSON.stringify(this.inferenceEngine.extractKeywords(input.text)),
-      inputLength: input.text.length,
-      inputPatterns: JSON.stringify([]),
-      chosenContextId: contextId,
-      chosenType: inference.generatedItems[0]?.itemType || 'action',
-      originalConfidence: inference.confidence,
-      wasCorrect: null, // Will be updated if user provides feedback
-    });
   }
 
   /**

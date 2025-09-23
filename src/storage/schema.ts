@@ -32,7 +32,7 @@ export const captures = sqliteTable('captures', {
     enum: ['critical', 'high', 'medium', 'low'] 
   }),
   status: text('status', { 
-    enum: ['active', 'completed', 'cancelled', 'archived'] 
+    enum: ['processing', 'active', 'completed', 'cancelled', 'archived'] 
   }).default('active'),
   
   // Context inference (AI-powered)
