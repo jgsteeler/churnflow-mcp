@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.2] - 2025-09-21
+## [0.4.2] - 2025-09-22
+
+### 🐞 Bug Fixes
+
+- **Fixed FTS Datatype Mismatch**: Resolved a critical `SqliteError: datatype mismatch` in the `DatabaseManager` by updating the Full-Text Search (FTS) implementation. The `content_rowid` was incorrectly linked to a string-based CUID primary key, causing errors on `INSERT`, `UPDATE`, and `DELETE`. The fix involves using the table's implicit integer `rowid` for FTS synchronization, ensuring compatibility and resolving the test failures.
+
+### 🧪 Testing
+
+- **All Tests Passing**: The entire test suite, including the previously failing `DatabaseManager.test.ts`, now passes, confirming the FTS fix is effective and the database layer is stable.
+
+## [0.4.1] - 2025-09-21
 
 ### 🎉 Major Features Added
 

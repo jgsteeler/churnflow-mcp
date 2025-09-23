@@ -113,6 +113,14 @@ describe('CaptureEngine', () => {
       mockInferenceEngineInstance.inferCapture.mockResolvedValue(mockInference);
       mockTrackerManagerInstance.appendToTracker.mockResolvedValue(true);
 
+      // Mock database operations
+      const dbManager = (captureEngine as any).databaseManager;
+      dbManager.getContextByName = jest.fn().mockResolvedValue(null);
+      dbManager.createContext = jest.fn().mockResolvedValue({ id: 'test-context-id' });
+      dbManager.createCapture = jest.fn().mockResolvedValue({ id: 'test-capture-id' });
+      dbManager.recordLearningPattern = jest.fn().mockResolvedValue(undefined);
+
+
       const result = await captureEngine.capture(SAMPLE_CAPTURE_INPUTS.business);
 
       expect(result.success).toBe(true);
