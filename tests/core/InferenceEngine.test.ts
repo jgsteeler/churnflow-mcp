@@ -6,7 +6,7 @@
  */
 
 import { InferenceEngine } from '../../src/core/InferenceEngine.js';
-import { TrackerManager } from '../../src/core/TrackerManager.js';
+import { DatabaseManager } from '../../src/storage/DatabaseManager.js';
 import { 
   TEST_CONFIG, 
   MOCK_AI_RESPONSE,
@@ -20,14 +20,14 @@ import OpenAI from 'openai';
 
 // Mock OpenAI
 jest.mock('openai');
-jest.mock('../../src/core/TrackerManager.js');
+jest.mock('../../src/storage/DatabaseManager.js');
 
 const mockOpenAI = OpenAI as jest.MockedClass<typeof OpenAI>;
-const mockTrackerManager = TrackerManager as jest.MockedClass<typeof TrackerManager>;
+const mockDatabaseManager = DatabaseManager as jest.MockedClass<typeof DatabaseManager>;
 
 describe('InferenceEngine', () => {
   let inferenceEngine: InferenceEngine;
-  let mockTrackerManagerInstance: jest.Mocked<TrackerManager>;
+  let mockDbManagerInstance: jest.Mocked<DatabaseManager>;
   let mockOpenAIInstance: any;
   let mockCreate: jest.MockedFunction<any>;
 
@@ -39,17 +39,12 @@ describe('InferenceEngine', () => {
     jest.spyOn(console, 'error').mockImplementation();
     jest.spyOn(console, 'warn').mockImplementation();
 
-    // Setup TrackerManager mock
-    mockTrackerManagerInstance = {
-      getContextMap: jest.fn(),
-      initialize: jest.fn(),
-      getTracker: jest.fn(),
-      getTrackersByContext: jest.fn(),
-      appendToTracker: jest.fn(),
-      refresh: jest.fn()
+    // Setup DatabaseManager mock
+    mockDbManagerInstance = {
+      getContexts: jest.fn(),
     } as any;
 
-    mockTrackerManager.mockImplementation(() => mockTrackerManagerInstance);
+    mockDatabaseManager.mockImplementation(() => mockDbManagerInstance);
 
     // Setup OpenAI mock
     mockCreate = jest.fn();
@@ -63,7 +58,7 @@ describe('InferenceEngine', () => {
 
     mockOpenAI.mockImplementation(() => mockOpenAIInstance);
 
-    inferenceEngine = new InferenceEngine(TEST_CONFIG, mockTrackerManagerInstance);
+    inferenceEngine = new InferenceEngine(TEST_CONFIG, mockDbManagerInstance);
   });
 
   afterEach(() => {
@@ -73,44 +68,14 @@ describe('InferenceEngine', () => {
   describe('successful AI inference', () => {
     beforeEach(() => {
       // Mock comprehensive context map for multi-item testing
-      mockTrackerManagerInstance.getContextMap.mockReturnValue({
-        'gsc-ai': {
-          friendlyName: 'GSC AI Consulting',
-          contextType: 'business',
-          keywords: ['#client', '#ai', '#consulting'],
-          recentActivity: ['Recent business activity']
-        },
-        'gsc-dev': {
-          friendlyName: 'GSC Development',
-          contextType: 'business',
-          keywords: ['#development', '#welding', '#projects'],
-          recentActivity: ['Doug project work']
-        },
-        'project-55': {
-          friendlyName: 'Project 55',
-          contextType: 'project',
-          keywords: ['#development', '#code'],
-          recentActivity: ['Recent project activity']
-        },
-        'outdoor-maintenance': {
-          friendlyName: 'Outdoor Maintenance',
-          contextType: 'personal',
-          keywords: ['#maintenance', '#outdoor', '#equipment'],
-          recentActivity: ['Equipment maintenance']
-        },
-        'deck': {
-          friendlyName: 'Deck Project',
-          contextType: 'project',
-          keywords: ['#deck', '#home', '#repair'],
-          recentActivity: ['Deck repairs']
-        },
-        'truck': {
-          friendlyName: 'Truck Maintenance',
-          contextType: 'personal',
-          keywords: ['#truck', '#vehicle', '#maintenance'],
-          recentActivity: ['Vehicle care']
-        }
-      });
+      mockDbManagerInstance.getContexts.mockResolvedValue([
+        { id: '1', name: 'gsc-ai', displayName: 'GSC AI Consulting', keywords: '#client,#ai,#consulting' },
+        { id: '2', name: 'gsc-dev', displayName: 'GSC Development', keywords: '#development,#welding,#projects' },
+        { id: '3', name: 'project-55', displayName: 'Project 55', keywords: '#development,#code' },
+        { id: '4', name: 'outdoor-maintenance', displayName: 'Outdoor Maintenance', keywords: '#maintenance,#outdoor,#equipment' },
+        { id: '5', name: 'deck', displayName: 'Deck Project', keywords: '#deck,#home,#repair' },
+        { id: '6', name: 'truck', displayName: 'Truck Maintenance', keywords: '#truck,#vehicle,#maintenance' },
+      ] as any);
     });
 
     it('should generate multiple items from complex Doug welder capture', async () => {
@@ -361,7 +326,7 @@ describe('InferenceEngine', () => {
   describe('AI failure and fallback handling', () => {
     beforeEach(() => {
       // Mock context map for error scenarios
-      mockTrackerManagerInstance.getContextMap.mockReturnValue({});
+      mockDbManagerInstance.getContexts.mockResolvedValue([]);
     });
 
     it('should handle OpenAI API errors gracefully with multi-item fallback', async () => {
@@ -533,7 +498,7 @@ describe('InferenceEngine', () => {
   describe('system prompt generation', () => {
     it('should generate multi-item system prompt with ADHD-friendly guidelines', async () => {
       // Mock context map
-      mockTrackerManagerInstance.getContextMap.mockReturnValue({});
+      mockDbManagerInstance.getContexts.mockResolvedValue([]);
       
       const mockResponse = createMockOpenAIResponse(MOCK_SINGLE_ITEM_RESPONSE);
       mockCreate.mockResolvedValue(mockResponse);
@@ -562,7 +527,7 @@ describe('InferenceEngine', () => {
   describe('fallback formatting', () => {
     it('should provide basic formatting when AI fails', async () => {
       // Mock context map
-      mockTrackerManagerInstance.getContextMap.mockReturnValue({});
+      mockDbManagerInstance.getContexts.mockResolvedValue([]);
       
       mockCreate.mockRejectedValue(new Error('API Error'));
 
@@ -586,9 +551,9 @@ describe('InferenceEngine', () => {
   // v0.3.1 Review System Tests
   describe('Review system integration', () => {
     beforeEach(() => {
-      mockTrackerManagerInstance.getContextMap.mockReturnValue({
-        'test': 'business tracker'
-      });
+      mockDbManagerInstance.getContexts.mockResolvedValue([
+        { id: '1', name: 'test', displayName: 'Test Context', keywords: 'business' },
+      ] as any);
     });
 
     describe('calculateInferenceConfidence', () => {

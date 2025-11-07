@@ -7,7 +7,7 @@ import {
   Priority,
   FORMATTING_CONSTANTS,
 } from "../types/churn.js";
-import { TrackerManager } from "./TrackerManager.js";
+import { DatabaseManager } from "../storage/DatabaseManager.js";
 import { FormattingUtils } from "../utils/FormattingUtils.js";
 
 /**
@@ -21,7 +21,7 @@ export class InferenceEngine {
 
   constructor(
     private config: ChurnConfig,
-    private trackerManager: TrackerManager,
+    private databaseManager: DatabaseManager,
   ) {
     if (this.config.aiProvider === "openai") {
       this.openai = new OpenAI({
@@ -35,7 +35,16 @@ export class InferenceEngine {
    * Analyze input and determine routing and formatting
    */
   async inferCapture(input: CaptureInput): Promise<InferenceResult> {
-    const contextMap = this.trackerManager.getContextMap();
+    const contexts = await this.databaseManager.getContexts();
+    const contextMap = contexts.reduce((acc, context) => {
+        acc[context.name] = {
+            friendlyName: context.displayName,
+            contextType: context.description, // Or some other field
+            keywords: context.keywords ? context.keywords.split(',').map(k => k.trim()) : [],
+            recentActivity: [] // This was from tracker files, placeholder for now
+        };
+        return acc;
+    }, {} as Record<string, any>);
 
     const prompt = this.buildInferencePrompt(input, contextMap);
 

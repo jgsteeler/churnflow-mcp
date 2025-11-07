@@ -97,6 +97,47 @@ export class DatabaseManager {
     return created;
   }
 
+  async updateCaptureWithInference(captureId: string, inference: any): Promise<void> {
+    const primaryItem = inference.generatedItems[0];
+    if (!primaryItem) {
+      throw new Error("AI inference did not generate any items.");
+    }
+    
+    const context = await this.getContextByName(inference.primaryTracker);
+    
+    let captureType: 'action' | 'note' | 'journal' | 'link' | 'someday' | 'reminder' | null = null;
+    switch (primaryItem.itemType) {
+      case 'action':
+      case 'someday':
+        captureType = primaryItem.itemType;
+        break;
+      case 'activity':
+        captureType = 'journal';
+        break;
+      case 'reference':
+        captureType = 'note';
+        break;
+      default:
+        captureType = 'note';
+    }
+
+    const newStatus: 'active' | 'processing' | 'completed' | 'cancelled' | 'archived' = inference.requiresReview ? 'active' : 'active';
+
+    const updatePayload = {
+      item: primaryItem.content,
+      captureType,
+      priority: primaryItem.priority as 'critical' | 'high' | 'medium' | 'low',
+      status: newStatus,
+      contextId: context?.id || null,
+      confidence: inference.confidence,
+      aiReasoning: primaryItem.reasoning,
+      tags: JSON.stringify([inference.primaryTracker]),
+      keywords: JSON.stringify([]), // Placeholder for now
+    };
+
+    await this.updateCapture(captureId, updatePayload);
+  }
+
   async createCapture(capture: NewCapture): Promise<Capture> {
     const insertData = {
       ...capture,
@@ -348,19 +389,26 @@ export class DatabaseManager {
     needingReview: number;
     overdue: number;
   }> {
-    const now = new Date().toISOString();
-    
     const [stats] = await this.db
       .select({
-        inbox: sql<number>`COUNT(CASE WHEN status = 'inbox' THEN 1 END)`,
-        active: sql<number>`COUNT(CASE WHEN status = 'active' THEN 1 END)`,
-        completed: sql<number>`COUNT(CASE WHEN status = 'completed' THEN 1 END)`,
-        needingReview: sql<number>`COUNT(CASE WHEN last_reviewed_at IS NULL THEN 1 END)`,
-        overdue: sql<number>`COUNT(CASE WHEN due_date < ${now} AND status != 'completed' THEN 1 END)`,
+        inbox: sql<number>`count(*)`.as('inbox'),
+        active: sql<number>`sum(case when status = 'active' then 1 else 0 end)`.as('active'),
+        completed: sql<number>`sum(case when status = 'completed' then 1 else 0 end)`.as('completed'),
+        needingReview: sql<number>`sum(case when status = 'processing' then 1 else 0 end)`.as('needingReview'),
+        overdue: sql<number>`sum(case when reminder_date < date('now') and status != 'completed' then 1 else 0 end)`.as('overdue'),
       })
       .from(captures);
       
     return stats || { inbox: 0, active: 0, completed: 0, needingReview: 0, overdue: 0 };
+  }
+
+  async isAvailable(): Promise<boolean> {
+    try {
+      await this.db.select().from(captures).limit(1);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   // DATABASE SETUP METHODS (Only called during setup, not normal operations)

@@ -10,10 +10,7 @@
  */
 
 import { CaptureEngine } from './core/CaptureEngine.js';
-import { ReviewManager } from './core/ReviewManager.js';
-import { TrackerManager } from './core/TrackerManager.js';
-import { DashboardManager } from './core/DashboardManager.js';
-import { ChurnConfig, ReviewableItem, ReviewAction, Priority, ItemType } from './types/churn.js';
+import { ChurnConfig } from './types/churn.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,8 +32,6 @@ const DEFAULT_CONFIG: ChurnConfig = {
 
 class ChurnCLI {
   private captureEngine?: CaptureEngine;
-  private reviewManager?: ReviewManager;
-  private trackerManager?: TrackerManager;
   private dashboardManager?: DashboardManager;
 
   async loadConfig(): Promise<ChurnConfig> {
@@ -70,38 +65,12 @@ class ChurnCLI {
     return this.captureEngine;
   }
 
-  async initializeReviewManager(): Promise<ReviewManager> {
-    if (this.reviewManager) return this.reviewManager;
-
-    const config = await this.loadConfig();
-    
-    // Initialize TrackerManager first
-    if (!this.trackerManager) {
-      this.trackerManager = new TrackerManager(config);
-      await this.trackerManager.initialize();
-    }
-    
-    this.reviewManager = new ReviewManager(config, this.trackerManager);
-    
-    return this.reviewManager;
-  }
-
   async initializeDashboardManager(): Promise<DashboardManager> {
     if (this.dashboardManager) return this.dashboardManager;
 
     const config = await this.loadConfig();
     
-    // Initialize dependencies
-    if (!this.trackerManager) {
-      this.trackerManager = new TrackerManager(config);
-      await this.trackerManager.initialize();
-    }
-    
-    if (!this.reviewManager) {
-      this.reviewManager = new ReviewManager(config, this.trackerManager);
-    }
-    
-    this.dashboardManager = new DashboardManager(config, this.trackerManager, this.reviewManager);
+    this.dashboardManager = new DashboardManager(config);
     
     return this.dashboardManager;
   }
@@ -117,30 +86,9 @@ class ChurnCLI {
       
       if (result.success) {
         console.log('✅ Capture Successful!');
-        console.log(`📁 Primary Tracker: ${result.primaryTracker}`);
+        console.log(`📁 Primary Context: ${result.primaryTracker}`);
         console.log(`🎯 Confidence: ${Math.round(result.confidence * 100)}%`);
-        console.log(`📊 Generated ${result.itemResults.length} items`);
-        
-        if (result.completedTasks.length > 0) {
-          console.log(`✅ Detected ${result.completedTasks.length} task completions`);
-        }
-        
-        console.log('\n📝 Items Generated:');
-        for (const item of result.itemResults) {
-          const status = item.success ? '✅' : '❌';
-          console.log(`  ${status} ${item.itemType} → ${item.tracker}`);
-          console.log(`     ${item.formattedEntry}`);
-          if (item.error) {
-            console.log(`     Error: ${item.error}`);
-          }
-        }
-        
-        if (result.completedTasks.length > 0) {
-          console.log('\n🎉 Task Completions:');
-          for (const completion of result.completedTasks) {
-            console.log(`  ✅ ${completion.description} (${completion.tracker})`);
-          }
-        }
+        console.log(`� Saved ${result.itemResults.length} items to the database.`);
         
         if (result.requiresReview) {
           console.log('\n⚠️  Requires human review');
@@ -148,9 +96,6 @@ class ChurnCLI {
       } else {
         console.log('❌ Capture Failed');
         console.log(`❗ Error: ${result.error}`);
-        if (result.itemResults.length > 0) {
-          console.log(`🚨 Emergency entry: ${result.itemResults[0].formattedEntry}`);
-        }
       }
       
     } catch (error) {
@@ -166,38 +111,10 @@ class ChurnCLI {
       const engine = await this.initializeCaptureEngine();
       const status = engine.getStatus();
       
-      console.log(`�︢ Initialized: ${status.initialized}`);
-      console.log(`📚 Total Trackers: ${status.totalTrackers}`);
+      console.log(`︢ Initialized: ${status.initialized}`);
+      console.log(`💾 Database Available: ${status.databaseAvailable}`);
       console.log(`⚙️  AI Provider: ${status.config.aiProvider}`);
       console.log(`🎯 Confidence Threshold: ${status.config.confidenceThreshold}`);
-      console.log(`📁 Collections Path: ${status.config.collectionsPath}`);
-      
-      console.log('\n📋 Trackers by Context:');
-      for (const [context, count] of Object.entries(status.trackersByContext)) {
-        console.log(`  ${context}: ${count}`);
-      }
-      
-      // Add review status
-      try {
-        const reviewManager = await this.initializeReviewManager();
-        const reviewStatus = reviewManager.getReviewStatus();
-        
-        console.log('\n🔍 Review Status:');
-        if (reviewStatus.total > 0) {
-          console.log(`  ${chalk.yellow('⚠️  Pending Review:')} ${reviewStatus.pending}`);
-          console.log(`  ${chalk.blue('🏷️  Flagged Items:')} ${reviewStatus.flagged}`);
-          console.log(`  ${chalk.green('✅ Confirmed:')} ${reviewStatus.confirmed}`);
-          console.log(`  ${chalk.cyan('📊 Total:')} ${reviewStatus.total}`);
-          
-          if (reviewStatus.pending > 0 || reviewStatus.flagged > 0) {
-            console.log(`\n${chalk.yellow('➡️  Run')} ${chalk.bold('npm run cli review')} ${chalk.yellow('to process items')}`);
-          }
-        } else {
-          console.log(`  ${chalk.green('✅ No items need review')}`);
-        }
-      } catch (reviewError) {
-        console.log(`  ${chalk.red('❌ Review system unavailable:')} ${reviewError}`);
-      }
       
     } catch (error) {
       console.error('💥 Status check failed:', error);

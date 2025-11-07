@@ -106,9 +106,10 @@ export interface InferenceResult {
  * Configuration for ChurnFlow system
  */
 export interface ChurnConfig {
-  collectionsPath: string;
-  trackingPath: string;
-  crossrefPath: string;
+  collectionsPath?: string;
+  trackingPath?: string;
+  crossrefPath?: string;
+  dbPath?: string; // Add dbPath for database configuration
   aiProvider: "openai" | "anthropic";
   aiApiKey: string;
   confidenceThreshold: number;
@@ -212,6 +213,7 @@ export interface CaptureItemResult {
  */
 export interface CaptureResult {
   success: boolean;
+  captureId?: string; // Add captureId for tracking
   primaryTracker: string;
   confidence: number;
   itemResults: CaptureItemResult[];

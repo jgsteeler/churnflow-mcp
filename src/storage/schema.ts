@@ -242,10 +242,10 @@ export const REVIEW_PRIORITY_RULES = {
 
 export const NEXT_ACTION_RULES = {
   // Ready to work on now
-  readyNow: 'status = "active" AND (startDate IS NULL OR startDate <= ?) AND lastReviewedAt IS NOT NULL',
+  readyNow: 'status = "active" AND (reminderDate IS NULL OR reminderDate <= ?) AND lastReviewedAt IS NOT NULL',
   
   // Quick wins (short, easy tasks)
-  quickWins: 'LENGTH(content) < 100 AND priority IN ("low", "medium") AND status = "active"',
+  quickWins: 'LENGTH(item) < 100 AND priority IN ("low", "medium") AND status = "active"',
   
   // High impact (important but manageable)
   highImpact: 'priority IN ("high", "critical") AND status = "active" AND lastReviewedAt IS NOT NULL',
