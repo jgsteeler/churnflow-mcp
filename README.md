@@ -4,6 +4,10 @@
 
 **ChurnFlow** is a production-ready Model Context Protocol (MCP) server that transforms the way ADHD minds manage productivity. Built with optional SQLite database integration, GitHub Copilot support, and comprehensive AI assistance, ChurnFlow works *with* your natural patterns of thinking, capturing, and processing information.
 
+<a href="https://glama.ai/mcp/servers/@jgsteeler/churnflow-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@jgsteeler/churnflow-mcp/badge" alt="ChurnFlow Server MCP server" />
+</a>
+
 ## 🎉 New in v0.4.2: Advanced Database Features & Migrations
 
 **v0.4.1 Highlights:**
